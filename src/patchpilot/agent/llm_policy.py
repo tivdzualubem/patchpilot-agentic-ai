@@ -14,7 +14,12 @@ from patchpilot.schemas import AgentState
 class TextGenerationModel(Protocol):
     """Minimal interface for a text-generation backend."""
 
-    def generate(self, system_prompt: str, user_prompt: str) -> str:
+    def generate(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        response_schema: dict[str, object] | None = None,
+    ) -> str:
         """Return one model-generated response."""
         ...
 
@@ -69,6 +74,7 @@ class StructuredLLMPolicy:
         response = self.model.generate(
             self._system_prompt(),
             self._user_prompt(state),
+            response_schema=AgentDecision.model_json_schema(),
         )
         payload = self._strip_code_fence(response)
 
