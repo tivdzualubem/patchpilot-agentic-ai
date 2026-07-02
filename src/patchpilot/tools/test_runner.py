@@ -32,9 +32,13 @@ _SAFE_PYTEST_FLAGS = {
 class TestExecutionError(ValueError):
     """Raised when a test command violates execution policy."""
 
+    __test__ = False
+
 
 class TestRunner:
     """Execute controlled pytest commands without a shell."""
+
+    __test__ = False
 
     def __init__(
         self,
