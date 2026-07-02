@@ -15,9 +15,11 @@ class FakeModel:
         self,
         system_prompt: str,
         user_prompt: str,
+        response_schema: dict[str, object] | None = None,
     ) -> str:
         assert "PatchPilot" in system_prompt
         assert "Current validated state" in user_prompt
+        assert response_schema is not None
         return self.response
 
 
@@ -65,9 +67,7 @@ def test_json_code_fence_is_supported() -> None:
 
 
 def test_invalid_response_fails_safely() -> None:
-    policy = StructuredLLMPolicy(
-        FakeModel('{"reasoning_summary": "missing action"}')
-    )
+    policy = StructuredLLMPolicy(FakeModel('{"reasoning_summary": "missing action"}'))
 
     with pytest.raises(PolicyResponseError):
         policy.decide(make_state())

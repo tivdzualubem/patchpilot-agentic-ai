@@ -26,14 +26,10 @@ class OllamaChatModel:
             raise ValueError("model cannot be empty.")
 
         if not 1 <= timeout_seconds <= 900:
-            raise ValueError(
-                "timeout_seconds must be between 1 and 900."
-            )
+            raise ValueError("timeout_seconds must be between 1 and 900.")
 
         if not 0.0 <= temperature <= 2.0:
-            raise ValueError(
-                "temperature must be between 0.0 and 2.0."
-            )
+            raise ValueError("temperature must be between 0.0 and 2.0.")
 
         self.model = model.strip()
         self.base_url = base_url.rstrip("/")
@@ -45,12 +41,13 @@ class OllamaChatModel:
         self,
         system_prompt: str,
         user_prompt: str,
+        response_schema: dict[str, object] | None = None,
     ) -> str:
         """Return one non-streaming JSON-mode chat response."""
         payload = {
             "model": self.model,
             "stream": False,
-            "format": "json",
+            "format": response_schema or "json",
             "messages": [
                 {
                     "role": "system",
@@ -81,17 +78,11 @@ class OllamaChatModel:
             ) as response:
                 body = response.read().decode("utf-8")
         except HTTPError as exc:
-            raise OllamaModelError(
-                f"Ollama returned HTTP {exc.code}."
-            ) from exc
+            raise OllamaModelError(f"Ollama returned HTTP {exc.code}.") from exc
         except URLError as exc:
-            raise OllamaModelError(
-                "Could not connect to the Ollama service."
-            ) from exc
+            raise OllamaModelError("Could not connect to the Ollama service.") from exc
         except TimeoutError as exc:
-            raise OllamaModelError(
-                "Ollama generation timed out."
-            ) from exc
+            raise OllamaModelError("Ollama generation timed out.") from exc
 
         try:
             result = json.loads(body)
@@ -102,8 +93,6 @@ class OllamaChatModel:
             ) from exc
 
         if not isinstance(content, str) or not content.strip():
-            raise OllamaModelError(
-                "Ollama returned empty generated content."
-            )
+            raise OllamaModelError("Ollama returned empty generated content.")
 
         return content.strip()
