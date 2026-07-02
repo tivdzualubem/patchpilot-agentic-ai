@@ -4,6 +4,10 @@ from patchpilot.benchmark.manifest import (
     BenchmarkManifest,
     load_manifest,
 )
+from patchpilot.benchmark.runner import (
+    BenchmarkRun,
+    BenchmarkRunner,
+)
 from patchpilot.benchmark.workspace import (
     BenchmarkWorkspace,
     BenchmarkWorkspaceError,
@@ -12,6 +16,8 @@ from patchpilot.benchmark.workspace import (
 
 __all__ = [
     "BenchmarkManifest",
+    "BenchmarkRun",
+    "BenchmarkRunner",
     "BenchmarkWorkspace",
     "BenchmarkWorkspaceError",
     "PreparedBenchmark",
