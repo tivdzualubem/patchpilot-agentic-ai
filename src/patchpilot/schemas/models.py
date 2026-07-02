@@ -69,13 +69,19 @@ class BudgetUsage(BaseModel):
     elapsed_seconds: float = Field(default=0.0, ge=0)
 
     def exhausted(self, budget: ExecutionBudget) -> bool:
-        """Return whether any configured limit has been reached."""
+        """Return whether a global execution limit has been reached."""
         return (
             self.steps >= budget.max_steps
             or self.tool_calls >= budget.max_tool_calls
-            or self.patch_attempts >= budget.max_patch_attempts
             or self.elapsed_seconds >= budget.max_seconds
         )
+
+    def patch_limit_reached(
+        self,
+        budget: ExecutionBudget,
+    ) -> bool:
+        """Return whether no additional patch may be attempted."""
+        return self.patch_attempts >= budget.max_patch_attempts
 
 
 class RepairTask(BaseModel):
@@ -181,6 +187,11 @@ class AgentState(BaseModel):
     actions: list[ToolAction] = Field(default_factory=list)
     observations: list[ToolObservation] = Field(default_factory=list)
     changed_files: list[str] = Field(default_factory=list)
+
+    repository_revision: int = Field(default=0, ge=0)
+    verified_revision: int | None = Field(default=None, ge=0)
+    full_suite_passed: bool = False
+
 
     final_message: str | None = None
 
