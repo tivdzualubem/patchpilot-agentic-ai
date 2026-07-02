@@ -69,7 +69,11 @@ def test_budget_usage_detects_exhaustion() -> None:
     assert BudgetUsage(steps=2).exhausted(budget) is False
     assert BudgetUsage(steps=3).exhausted(budget) is True
     assert BudgetUsage(tool_calls=5).exhausted(budget) is True
-    assert BudgetUsage(patch_attempts=2).exhausted(budget) is True
+    assert BudgetUsage(patch_attempts=2).exhausted(budget) is False
+    assert (
+        BudgetUsage(patch_attempts=2).patch_limit_reached(budget)
+        is True
+    )
     assert BudgetUsage(elapsed_seconds=60).exhausted(budget) is True
 
 
