@@ -1,0 +1,13 @@
+task_id,condition,status,succeeded,full_suite_passed,steps,tool_calls,patch_attempts,elapsed_seconds
+calculator-001,no-retry-live-qwen,succeeded,True,True,5,5,1,
+calculator-002,no-retry-live-qwen,succeeded,True,True,5,5,1,
+calculator-003,no-retry-live-qwen,succeeded,True,True,5,5,1,
+calculator-004,no-retry-live-qwen,succeeded,True,True,5,5,1,
+geometry-001,no-retry-live-qwen,succeeded,True,True,5,5,1,
+geometry-002,no-retry-live-qwen,budget_exhausted,False,False,6,6,1,
+lists-001,no-retry-live-qwen,succeeded,True,True,5,5,1,
+lists-002,no-retry-live-qwen,budget_exhausted,False,False,6,6,1,
+numbers-001,no-retry-live-qwen,succeeded,True,True,5,5,1,
+stats-001,no-retry-live-qwen,budget_exhausted,False,False,6,6,1,
+strings-001,no-retry-live-qwen,succeeded,True,True,5,5,1,
+strings-002,no-retry-live-qwen,budget_exhausted,False,False,6,6,1,
