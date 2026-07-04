@@ -157,6 +157,10 @@ STEP_6=finish|ok
 
 ## Interactive Demo
 
+Hosted demo: https://lubem-patchpilot-agentic-ai.hf.space/
+
+Hugging Face Space: https://huggingface.co/spaces/lubem/patchpilot-agentic-ai
+
 PatchPilot includes a Streamlit prototype that allows users to select a benchmark task, inspect the broken source and tests, run the agent locally, view the tool-use trace, inspect the patch diff, and confirm final pytest verification.
 
 Install demo dependencies:
