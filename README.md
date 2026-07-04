@@ -1,3 +1,13 @@
+---
+title: PatchPilot Agentic AI
+emoji: 🛠️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 8501
+pinned: false
+---
+
 # PatchPilot: A Tool-Using Agent for Python Debugging and Repair
 
 PatchPilot is a bounded Agentic AI system for autonomous Python debugging and repair. It treats software repair as an agent-environment loop: reproduce the failure, inspect relevant code, form a repair hypothesis, apply a controlled patch, verify with tests, and stop only when the current repository revision is executable and verified.
