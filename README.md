@@ -144,6 +144,47 @@ STEP_5=run_tests|ok
 STEP_6=finish|ok
 ```
 
+
+## Interactive Demo
+
+PatchPilot includes a Streamlit prototype that allows users to select a benchmark task, inspect the broken source and tests, run the agent locally, view the tool-use trace, inspect the patch diff, and confirm final pytest verification.
+
+Install demo dependencies:
+
+```bash
+python -m pip install -r demo/requirements-demo.txt
+```
+
+Run the demo:
+
+```bash
+streamlit run demo/streamlit_app.py --server.headless true --browser.gatherUsageStats false
+```
+
+Open:
+
+```text
+http://localhost:8501
+```
+
+The live repair button requires Ollama and the selected model to be available locally.
+
+## Docker Demo
+
+Build and run the demo container:
+
+```bash
+docker compose up --build
+```
+
+Then open:
+
+```text
+http://localhost:8501
+```
+
+The Docker demo packages the repository and Streamlit frontend. Live Ollama execution requires access to a running Ollama service from the container environment.
+
 ## Safety Design
 
 PatchPilot uses a restricted execution boundary:
