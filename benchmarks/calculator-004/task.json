@@ -1,0 +1,21 @@
+{
+  "task_id": "calculator-004",
+  "title": "Negation returns unchanged value",
+  "goal": "Repair the negate function so that all regression tests pass.",
+  "repository_root": "benchmarks/calculator-004/repository",
+  "defect_category": "wrong_unary_operator",
+  "difficulty": "easy",
+  "allowed_paths": [
+    "src"
+  ],
+  "forbidden_paths": [
+    "tests"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "expected_initial_failures": 2
+}

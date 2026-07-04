@@ -1,0 +1,21 @@
+{
+  "task_id": "strings-001",
+  "title": "Reverse text returns original string",
+  "goal": "Repair the reverse_text function so that all regression tests pass.",
+  "repository_root": "benchmarks/strings-001/repository",
+  "defect_category": "incorrect_string_operation",
+  "difficulty": "easy",
+  "allowed_paths": [
+    "src"
+  ],
+  "forbidden_paths": [
+    "tests"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "expected_initial_failures": 2
+}

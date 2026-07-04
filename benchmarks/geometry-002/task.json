@@ -1,0 +1,21 @@
+{
+  "task_id": "geometry-002",
+  "title": "Rectangle perimeter uses area multiplication",
+  "goal": "Repair the rectangle_perimeter function so that all regression tests pass.",
+  "repository_root": "benchmarks/geometry-002/repository",
+  "defect_category": "wrong_formula",
+  "difficulty": "medium",
+  "allowed_paths": [
+    "src"
+  ],
+  "forbidden_paths": [
+    "tests"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "expected_initial_failures": 3
+}

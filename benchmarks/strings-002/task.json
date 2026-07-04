@@ -1,0 +1,21 @@
+{
+  "task_id": "strings-002",
+  "title": "Lowercase conversion uses uppercase",
+  "goal": "Repair the lowercase function so that all regression tests pass.",
+  "repository_root": "benchmarks/strings-002/repository",
+  "defect_category": "incorrect_string_operation",
+  "difficulty": "easy",
+  "allowed_paths": [
+    "src"
+  ],
+  "forbidden_paths": [
+    "tests"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "expected_initial_failures": 2
+}

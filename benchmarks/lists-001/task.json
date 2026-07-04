@@ -1,0 +1,21 @@
+{
+  "task_id": "lists-001",
+  "title": "First item returns last item",
+  "goal": "Repair the first_item function so that all regression tests pass.",
+  "repository_root": "benchmarks/lists-001/repository",
+  "defect_category": "wrong_index",
+  "difficulty": "easy",
+  "allowed_paths": [
+    "src"
+  ],
+  "forbidden_paths": [
+    "tests"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "expected_initial_failures": 2
+}

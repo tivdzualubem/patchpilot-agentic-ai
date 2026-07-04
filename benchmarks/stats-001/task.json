@@ -1,0 +1,21 @@
+{
+  "task_id": "stats-001",
+  "title": "Mean divides by incorrect count",
+  "goal": "Repair the mean function so that all regression tests pass.",
+  "repository_root": "benchmarks/stats-001/repository",
+  "defect_category": "off_by_one_denominator",
+  "difficulty": "medium",
+  "allowed_paths": [
+    "src"
+  ],
+  "forbidden_paths": [
+    "tests"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "expected_initial_failures": 2
+}

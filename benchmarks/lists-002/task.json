@@ -1,0 +1,21 @@
+{
+  "task_id": "lists-002",
+  "title": "Total returns list length",
+  "goal": "Repair the total function so that all regression tests pass.",
+  "repository_root": "benchmarks/lists-002/repository",
+  "defect_category": "wrong_builtin",
+  "difficulty": "easy",
+  "allowed_paths": [
+    "src"
+  ],
+  "forbidden_paths": [
+    "tests"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "expected_initial_failures": 2
+}

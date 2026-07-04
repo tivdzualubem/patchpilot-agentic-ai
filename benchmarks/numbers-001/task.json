@@ -1,0 +1,21 @@
+{
+  "task_id": "numbers-001",
+  "title": "Even-number predicate is inverted",
+  "goal": "Repair the is_even function so that all regression tests pass.",
+  "repository_root": "benchmarks/numbers-001/repository",
+  "defect_category": "wrong_comparison",
+  "difficulty": "easy",
+  "allowed_paths": [
+    "src"
+  ],
+  "forbidden_paths": [
+    "tests"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "expected_initial_failures": 3
+}
