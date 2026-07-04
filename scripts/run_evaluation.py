@@ -14,6 +14,29 @@ from patchpilot.evaluation import collect_run_metrics, summarise_runs
 from patchpilot.models.ollama import OllamaChatModel
 from patchpilot.schemas import ExecutionBudget
 
+EVALUATION_CONDITIONS = [
+    "full-agent-live-qwen",
+    "no-retry-live-qwen",
+]
+
+
+def budget_for_condition(condition: str) -> ExecutionBudget:
+    """Return the execution budget for one evaluation condition."""
+    if condition == "no-retry-live-qwen":
+        return ExecutionBudget(
+            max_steps=6,
+            max_tool_calls=6,
+            max_patch_attempts=1,
+            max_seconds=1800,
+        )
+
+    return ExecutionBudget(
+        max_steps=10,
+        max_tool_calls=10,
+        max_patch_attempts=3,
+        max_seconds=1800,
+    )
+
 
 def benchmark_manifests(project_root: Path) -> list[Path]:
     """Return all benchmark manifests in stable order."""
@@ -40,7 +63,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--condition",
         default="full-agent-live-qwen",
-        choices=["full-agent-live-qwen"],
+        choices=EVALUATION_CONDITIONS,
         help="Evaluation condition to run.",
     )
     parser.add_argument(
@@ -85,12 +108,7 @@ def main() -> None:
             seed=42,
         )
     )
-    budget = ExecutionBudget(
-        max_steps=10,
-        max_tool_calls=10,
-        max_patch_attempts=3,
-        max_seconds=1800,
-    )
+    budget = budget_for_condition(args.condition)
 
     run_rows = []
     for manifest_path in manifests:
