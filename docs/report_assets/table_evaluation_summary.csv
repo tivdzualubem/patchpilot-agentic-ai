@@ -1,0 +1,4 @@
+Condition,Runs,Successes,Repair rate,Full-suite pass rate,Invalid patch rate,Budget exhaustions,Escalations,Mean patch attempts
+Full agent,12,12,100.0%,100.0%,0.0%,0,0,1.25
+One-shot baseline,12,8,66.7%,66.7%,0.0%,0,4,1.00
+No-retry ablation,12,8,66.7%,66.7%,0.0%,4,0,1.00

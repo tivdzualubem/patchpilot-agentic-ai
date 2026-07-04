@@ -1,0 +1,8 @@
+Metric,Value
+Full agent successes,12/12
+One-shot baseline successes,8/12
+Both succeeded,8
+Full agent only succeeded,4
+One-shot only succeeded,0
+Both failed,0
+Exact McNemar p-value,0.1250
