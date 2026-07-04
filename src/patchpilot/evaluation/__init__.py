@@ -13,3 +13,10 @@ __all__ = [
     "collect_run_metrics",
     "summarise_runs",
 ]
+
+from patchpilot.evaluation.statistics import McNemarResult, exact_mcnemar_test
+
+__all__ = [
+    "McNemarResult",
+    "exact_mcnemar_test",
+]
