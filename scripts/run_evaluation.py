@@ -11,7 +11,7 @@ from pathlib import Path
 from patchpilot.agent.llm_policy import StructuredLLMPolicy
 from patchpilot.benchmark import BenchmarkRunner, load_manifest
 from patchpilot.evaluation import collect_run_metrics, summarise_runs
-from patchpilot.models.ollama import OllamaModel
+from patchpilot.models.ollama import OllamaChatModel
 from patchpilot.schemas import ExecutionBudget
 
 
@@ -78,7 +78,7 @@ def main() -> None:
         output_root=result_root,
     )
     policy = StructuredLLMPolicy(
-        OllamaModel(
+        OllamaChatModel(
             model=args.model,
             timeout_seconds=300,
             temperature=0.0,
