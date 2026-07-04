@@ -35,18 +35,18 @@ The benchmark tasks cover arithmetic, geometry, list processing, number handling
 
 | Task | Status | Success | Full Suite Passed | Steps | Tool Calls | Patch Attempts | Seconds |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: |
-| calculator-001 | succeeded |  | True | 5 | 5 | 1 | 27.01 |
-| calculator-002 | succeeded |  | True | 5 | 5 | 1 | 28.09 |
-| calculator-003 | succeeded |  | True | 5 | 5 | 1 | 32.77 |
-| calculator-004 | succeeded |  | True | 5 | 5 | 1 | 27.32 |
-| geometry-001 | succeeded |  | True | 5 | 5 | 1 | 38.00 |
-| geometry-002 | succeeded |  | True | 8 | 8 | 2 | 77.40 |
-| lists-001 | succeeded |  | True | 5 | 5 | 1 | 29.10 |
-| lists-002 | succeeded |  | True | 5 | 5 | 1 | 25.55 |
-| numbers-001 | succeeded |  | True | 5 | 5 | 1 | 32.75 |
-| stats-001 | succeeded |  | True | 8 | 8 | 2 | 72.84 |
-| strings-001 | succeeded |  | True | 5 | 5 | 1 | 26.24 |
-| strings-002 | succeeded |  | True | 8 | 8 | 2 | 64.60 |
+| calculator-001 | succeeded | True | True | 5 | 5 | 1 | 27.01 |
+| calculator-002 | succeeded | True | True | 5 | 5 | 1 | 28.09 |
+| calculator-003 | succeeded | True | True | 5 | 5 | 1 | 32.77 |
+| calculator-004 | succeeded | True | True | 5 | 5 | 1 | 27.32 |
+| geometry-001 | succeeded | True | True | 5 | 5 | 1 | 38.00 |
+| geometry-002 | succeeded | True | True | 8 | 8 | 2 | 77.40 |
+| lists-001 | succeeded | True | True | 5 | 5 | 1 | 29.10 |
+| lists-002 | succeeded | True | True | 5 | 5 | 1 | 25.55 |
+| numbers-001 | succeeded | True | True | 5 | 5 | 1 | 32.75 |
+| stats-001 | succeeded | True | True | 8 | 8 | 2 | 72.84 |
+| strings-001 | succeeded | True | True | 5 | 5 | 1 | 26.24 |
+| strings-002 | succeeded | True | True | 8 | 8 | 2 | 64.60 |
 
 ## Interpretation
 
