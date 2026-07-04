@@ -317,6 +317,7 @@ class PatchManager:
             "PATH": os.environ.get("PATH", ""),
             "LANG": "C.UTF-8",
             "LC_ALL": "C.UTF-8",
+            "GIT_CEILING_DIRECTORIES": str(self.repository_root.parent),
         }
 
         return subprocess.run(

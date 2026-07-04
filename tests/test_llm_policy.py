@@ -1,15 +1,21 @@
 import pytest
 
-from patchpilot.agent import (
-    PolicyResponseError,
-    StructuredLLMPolicy,
+from patchpilot.agent import PolicyResponseError, StructuredLLMPolicy
+from patchpilot.schemas import (
+    AgentState,
+    ObservationStatus,
+    RepairTask,
+    ToolAction,
+    ToolName,
+    ToolObservation,
 )
-from patchpilot.schemas import AgentState, RepairTask, ToolName
 
 
 class FakeModel:
     def __init__(self, response: str) -> None:
         self.response = response
+        self.calls = 0
+        self.last_response_schema: dict[str, object] | None = None
 
     def generate(
         self,
@@ -18,56 +24,217 @@ class FakeModel:
         response_schema: dict[str, object] | None = None,
     ) -> str:
         assert "PatchPilot" in system_prompt
-        assert "Current validated state" in user_prompt
-        assert response_schema is not None
+        self.calls += 1
+        self.last_response_schema = response_schema
         return self.response
 
 
-def make_state() -> AgentState:
-    task = RepairTask(
+class NoCallModel:
+    def generate(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        response_schema: dict[str, object] | None = None,
+    ) -> str:
+        raise AssertionError("model should not be called")
+
+
+def make_task() -> RepairTask:
+    return RepairTask(
         task_id="llm-policy-001",
-        goal="Repair the defective Python implementation.",
+        goal="Repair the defective add function.",
         repository_root="benchmarks/example",
     )
-    return AgentState(task=task)
 
 
-def valid_response() -> str:
-    return """
-{
-  "reasoning_summary": "Inspect the repository first.",
-  "plan": ["List repository files."],
-  "hypothesis": null,
-  "reflection": null,
-  "action": {
-    "tool": "list_files",
-    "arguments": {"relative_path": "."},
-    "rationale": "Inspect the repository structure."
-  }
-}
-"""
+def failed_test_state() -> AgentState:
+    state = AgentState(task=make_task())
+    state.actions.append(
+        ToolAction(
+            tool=ToolName.RUN_TESTS,
+            arguments={},
+            rationale="Run tests.",
+        )
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.RUN_TESTS,
+            status=ObservationStatus.ERROR,
+            summary="Tests failed.",
+            output="E assert -1 == 5\nE where -1 = add(2, 3)",
+        )
+    )
+    return state
 
 
-def test_valid_json_creates_decision() -> None:
-    policy = StructuredLLMPolicy(FakeModel(valid_response()))
+def searched_state() -> AgentState:
+    state = failed_test_state()
+    state.actions.append(
+        ToolAction(
+            tool=ToolName.SEARCH_CODE,
+            arguments={"query": "add", "relative_path": "src"},
+            rationale="Search source.",
+        )
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.SEARCH_CODE,
+            status=ObservationStatus.OK,
+            summary="Found matches.",
+            output="src/calculator.py:4:def add(left: int, right: int) -> int:",
+        )
+    )
+    return state
 
-    decision = policy.decide(make_state())
 
-    assert decision.action.tool is ToolName.LIST_FILES
-    assert decision.plan == ["List repository files."]
+def read_state() -> AgentState:
+    state = searched_state()
+    state.actions.append(
+        ToolAction(
+            tool=ToolName.READ_FILE,
+            arguments={"relative_path": "src/calculator.py"},
+            rationale="Read source.",
+        )
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.READ_FILE,
+            status=ObservationStatus.OK,
+            summary="Read source.",
+            output=(
+                "4: def add(left: int, right: int) -> int:\n"
+                "5:     return left - right"
+            ),
+        )
+    )
+    return state
 
 
-def test_json_code_fence_is_supported() -> None:
-    response = f"```json\n{valid_response()}\n```"
-    policy = StructuredLLMPolicy(FakeModel(response))
+def valid_diff() -> str:
+    return "\n".join(
+        [
+            "diff --git a/src/calculator.py b/src/calculator.py",
+            "--- a/src/calculator.py",
+            "+++ b/src/calculator.py",
+            "@@ -1,2 +1,2 @@",
+            " def add(left: int, right: int) -> int:",
+            "-    return left - right",
+            "+    return left + right",
+            "",
+        ]
+    )
 
-    decision = policy.decide(make_state())
 
-    assert decision.action.tool is ToolName.LIST_FILES
+def test_first_decision_runs_full_suite_without_model_call() -> None:
+    policy = StructuredLLMPolicy(NoCallModel())
+
+    decision = policy.decide(AgentState(task=make_task()))
+
+    assert decision.action.tool is ToolName.RUN_TESTS
+    assert decision.action.arguments == {}
 
 
-def test_invalid_response_fails_safely() -> None:
-    policy = StructuredLLMPolicy(FakeModel('{"reasoning_summary": "missing action"}'))
+def test_failed_tests_search_for_failing_symbol() -> None:
+    policy = StructuredLLMPolicy(NoCallModel())
+
+    decision = policy.decide(failed_test_state())
+
+    assert decision.action.tool is ToolName.SEARCH_CODE
+    assert decision.action.arguments == {"query": "add", "relative_path": "src"}
+
+
+def test_search_result_reads_source_file() -> None:
+    policy = StructuredLLMPolicy(NoCallModel())
+
+    decision = policy.decide(searched_state())
+
+    assert decision.action.tool is ToolName.READ_FILE
+    assert decision.action.arguments == {"relative_path": "src/calculator.py"}
+
+
+def test_read_file_generates_diff_only_patch_decision() -> None:
+    model = FakeModel(valid_diff())
+    policy = StructuredLLMPolicy(model)
+
+    decision = policy.decide(read_state())
+
+    assert model.calls == 1
+    assert model.last_response_schema is None
+    assert decision.action.tool is ToolName.APPLY_PATCH
+    assert "return left + right" in decision.action.arguments["patch_text"]
+
+
+def test_apply_patch_success_forces_verification() -> None:
+    state = read_state()
+    state.actions.append(
+        ToolAction(
+            tool=ToolName.APPLY_PATCH,
+            arguments={"patch_text": valid_diff()},
+            rationale="Patch source.",
+        )
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.APPLY_PATCH,
+            status=ObservationStatus.OK,
+            summary="Patch applied.",
+        )
+    )
+    policy = StructuredLLMPolicy(NoCallModel())
+
+    decision = policy.decide(state)
+
+    assert decision.action.tool is ToolName.RUN_TESTS
+
+
+def test_invalid_diff_fails_safely() -> None:
+    policy = StructuredLLMPolicy(FakeModel("not a diff"))
 
     with pytest.raises(PolicyResponseError):
-        policy.decide(make_state())
+        policy.decide(read_state())
+
+
+def test_malformed_diff_with_replacement_line_is_repaired() -> None:
+    malformed = "\n".join(
+        [
+            "diff --git a/src/calculator.py b/src/calculator.py",
+            "--- a/src/calculator.py",
+            "+++ b/src/calculator.py",
+            "@@ -5,7 +5,7 @@",
+            " def add(left: int, right: int) -> int:",
+            "     return left + right",
+            "",
+        ]
+    )
+    policy = StructuredLLMPolicy(FakeModel(malformed))
+
+    decision = policy.decide(read_state())
+
+    patch_text = decision.action.arguments["patch_text"]
+    assert "-    return left - right" in patch_text
+    assert "+    return left + right" in patch_text
+
+
+def test_corrupt_model_hunk_header_is_rebuilt() -> None:
+    corrupt = "\n".join(
+        [
+            "diff --git a/src/calculator.py b/src/calculator.py",
+            "--- a/src/calculator.py",
+            "+++ b/src/calculator.py",
+            "@@ -4,7 +4,7 @@",
+            "",
+            " def add(left: int, right: int) -> int:",
+            "     \"\"\"Return the sum of two integers.\"\"\"",
+            "-    return left - right",
+            "+    return left + right",
+            "",
+        ]
+    )
+    policy = StructuredLLMPolicy(FakeModel(corrupt))
+
+    decision = policy.decide(read_state())
+
+    patch_text = decision.action.arguments["patch_text"]
+    assert "@@" in patch_text
+    assert "-    return left - right" in patch_text
+    assert "+    return left + right" in patch_text

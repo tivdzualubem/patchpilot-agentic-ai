@@ -358,3 +358,78 @@ def test_terminal_state_rejects_later_actions(
 
     assert result.status is ObservationStatus.REJECTED
     assert state.status is AgentStatus.ESCALATED
+
+
+def test_restore_without_changes_is_rejected(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+
+    result = executor.execute(
+        state,
+        action(ToolName.RESTORE_FILE),
+    )
+
+    assert result.status is ObservationStatus.REJECTED
+    assert "No changed files" in result.summary
+    assert state.repository_revision == 0
+
+
+def test_repeated_identical_action_is_rejected(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+
+    first = executor.execute(state, action(ToolName.LIST_FILES))
+    repeated = executor.execute(state, action(ToolName.LIST_FILES))
+
+    assert first.status is ObservationStatus.OK
+    assert repeated.status is ObservationStatus.REJECTED
+    assert "repeated identical action" in repeated.summary
+
+
+def test_different_action_resets_repeated_action_sequence(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+
+    executor.execute(state, action(ToolName.LIST_FILES))
+    middle = executor.execute(
+        state,
+        action(ToolName.READ_FILE, {"relative_path": "src/calculator.py"}),
+    )
+    repeated_after_reset = executor.execute(state, action(ToolName.LIST_FILES))
+
+    assert middle.status is ObservationStatus.OK
+    assert repeated_after_reset.status is ObservationStatus.OK
+
+
+def test_run_tests_after_successful_patch_is_allowed(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+
+    initial_tests = executor.execute(state, action(ToolName.RUN_TESTS))
+    patch = executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": repair_patch()}),
+    )
+    verification = executor.execute(state, action(ToolName.RUN_TESTS))
+
+    assert initial_tests.status is ObservationStatus.ERROR
+    assert patch.status is ObservationStatus.OK
+    assert verification.status is ObservationStatus.OK
+
+
+def test_repeated_action_rejection_is_audited(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+
+    executor.execute(state, action(ToolName.LIST_FILES))
+    result = executor.execute(state, action(ToolName.LIST_FILES))
+
+    assert result.status is ObservationStatus.REJECTED
+    assert state.actions[-1].tool is ToolName.LIST_FILES
+    assert state.observations[-1].status is ObservationStatus.REJECTED
+    assert state.observations[-1].summary == result.summary

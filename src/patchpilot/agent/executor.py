@@ -8,6 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from patchpilot.agent.loop_guard import RepeatedActionGuard
 from patchpilot.schemas import (
     AgentState,
     AgentStatus,
@@ -87,6 +88,7 @@ class AgentToolExecutor:
         workspace_root: Path,
         task: RepairTask,
         test_timeout_seconds: int = 60,
+        repeated_action_guard: RepeatedActionGuard | None = None,
     ) -> None:
         self.sandbox = RepositorySandbox(workspace_root, task)
         self.test_runner = TestRunner(
@@ -95,6 +97,7 @@ class AgentToolExecutor:
             timeout_seconds=test_timeout_seconds,
         )
         self.patch_manager = PatchManager(self.sandbox, task)
+        self.repeated_action_guard = repeated_action_guard or RepeatedActionGuard()
         self._started_at = perf_counter()
 
     @staticmethod
@@ -327,6 +330,20 @@ class AgentToolExecutor:
 
         if action.tool is ToolName.APPLY_PATCH:
             state.usage.patch_attempts += 1
+
+        if self.repeated_action_guard.blocks(state, action):
+            return self._reject(
+                state,
+                action,
+                "Rejected repeated identical action with no intervening progress.",
+            )
+
+        if action.tool is ToolName.RESTORE_FILE and not state.changed_files:
+            return self._reject(
+                state,
+                action,
+                "No changed files are available to restore.",
+            )
 
         observation, test_target = self._dispatch(action)
 

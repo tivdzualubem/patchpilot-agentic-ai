@@ -21,6 +21,7 @@ class OllamaChatModel:
         timeout_seconds: int = 180,
         temperature: float = 0.0,
         seed: int = 42,
+        max_tokens: int = 512,
     ) -> None:
         if not model.strip():
             raise ValueError("model cannot be empty.")
@@ -31,11 +32,15 @@ class OllamaChatModel:
         if not 0.0 <= temperature <= 2.0:
             raise ValueError("temperature must be between 0.0 and 2.0.")
 
+        if not 1 <= max_tokens <= 4096:
+            raise ValueError("max_tokens must be between 1 and 4096.")
+
         self.model = model.strip()
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.temperature = temperature
         self.seed = seed
+        self.max_tokens = max_tokens
 
     def generate(
         self,
@@ -44,10 +49,9 @@ class OllamaChatModel:
         response_schema: dict[str, object] | None = None,
     ) -> str:
         """Return one non-streaming JSON-mode chat response."""
-        payload = {
+        payload: dict[str, object] = {
             "model": self.model,
             "stream": False,
-            "format": response_schema or "json",
             "messages": [
                 {
                     "role": "system",
@@ -61,8 +65,12 @@ class OllamaChatModel:
             "options": {
                 "temperature": self.temperature,
                 "seed": self.seed,
+                "num_predict": self.max_tokens,
             },
         }
+
+        if response_schema is not None:
+            payload["format"] = "json"
 
         request = Request(
             f"{self.base_url}/api/chat",
@@ -78,7 +86,10 @@ class OllamaChatModel:
             ) as response:
                 body = response.read().decode("utf-8")
         except HTTPError as exc:
-            raise OllamaModelError(f"Ollama returned HTTP {exc.code}.") from exc
+            body = exc.read().decode("utf-8", errors="replace")
+            raise OllamaModelError(
+                f"Ollama returned HTTP {exc.code}: {body[:500]}"
+            ) from exc
         except URLError as exc:
             raise OllamaModelError("Could not connect to the Ollama service.") from exc
         except TimeoutError as exc:
