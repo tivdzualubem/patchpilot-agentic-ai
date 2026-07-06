@@ -40,7 +40,7 @@ run_tests -> search_code -> read_file -> apply_patch -> run_tests -> finish
 The current local quality gate passes:
 
 ```text
-pytest: 86 passed
+pytest: 107 passed
 ruff: passed
 mypy: passed
 git diff --check: passed
@@ -213,11 +213,12 @@ PatchPilot uses a restricted execution boundary:
 
 ## Evaluation Plan
 
-The intended evaluation compares the full PatchPilot agent against:
+The completed evaluation compares the full PatchPilot agent against:
 
 1. one-shot patch generation;
-2. a fixed one-pass debugging workflow;
-3. a reduced tool-using agent without reflection.
+2. a no-retry/reduced-budget ablation.
+
+A supplementary QuixBugs smoke test evaluates external public-benchmark behavior.
 
 Primary metrics:
 
@@ -236,4 +237,4 @@ PatchPilot targets small Python repositories with executable pytest suites. It i
 
 ## License
 
-License information will be added before final release.
+No open-source license has been declared yet.

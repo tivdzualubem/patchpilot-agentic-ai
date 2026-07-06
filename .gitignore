@@ -14,3 +14,9 @@ build/
 artifacts/
 runs/
 sandboxes/
+
+external_benchmarks/quixbugs/source/
+
+artifacts/external/
+
+external_benchmarks/

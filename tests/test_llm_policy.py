@@ -102,8 +102,7 @@ def read_state() -> AgentState:
             status=ObservationStatus.OK,
             summary="Read source.",
             output=(
-                "4: def add(left: int, right: int) -> int:\n"
-                "5:     return left - right"
+                "4: def add(left: int, right: int) -> int:\n5:     return left - right"
             ),
         )
     )
@@ -224,7 +223,7 @@ def test_corrupt_model_hunk_header_is_rebuilt() -> None:
             "@@ -4,7 +4,7 @@",
             "",
             " def add(left: int, right: int) -> int:",
-            "     \"\"\"Return the sum of two integers.\"\"\"",
+            '     """Return the sum of two integers."""',
             "-    return left - right",
             "+    return left + right",
             "",
@@ -238,3 +237,108 @@ def test_corrupt_model_hunk_header_is_rebuilt() -> None:
     assert "@@" in patch_text
     assert "-    return left - right" in patch_text
     assert "+    return left + right" in patch_text
+
+
+def test_search_uses_task_allowed_source_root() -> None:
+    task = RepairTask(
+        task_id="quixbugs-gcd",
+        goal="Repair gcd.",
+        repository_root="repository",
+        allowed_paths=["python_programs"],
+    )
+    state = AgentState(task=task)
+    state.actions.append(
+        ToolAction(tool=ToolName.RUN_TESTS, arguments={}, rationale="Run tests.")
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.RUN_TESTS,
+            status=ObservationStatus.ERROR,
+            summary="Tests failed.",
+            output="python_programs/gcd.py:5: RecursionError",
+        )
+    )
+
+    decision = StructuredLLMPolicy(NoCallModel()).decide(state)
+
+    assert decision.action.tool is ToolName.SEARCH_CODE
+    assert decision.action.arguments["relative_path"] == "python_programs"
+    assert decision.action.arguments["query"]
+
+
+def test_search_result_reads_file_under_allowed_source_root() -> None:
+    state = failed_test_state()
+    state.task.allowed_paths = ["python_programs"]
+    state.actions.append(
+        ToolAction(
+            tool=ToolName.SEARCH_CODE,
+            arguments={"query": "gcd", "relative_path": "python_programs"},
+            rationale="Search source.",
+        )
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.SEARCH_CODE,
+            status=ObservationStatus.OK,
+            summary="Found matches.",
+            output="python_programs/gcd.py:1:def gcd(a, b):",
+        )
+    )
+
+    decision = StructuredLLMPolicy(NoCallModel()).decide(state)
+
+    assert decision.action.tool is ToolName.READ_FILE
+    assert decision.action.arguments == {"relative_path": "python_programs/gcd.py"}
+
+
+def test_failed_verification_restores_changed_file() -> None:
+    state = read_state()
+    state.changed_files.append("src/calculator.py")
+    state.actions.append(
+        ToolAction(tool=ToolName.RUN_TESTS, arguments={}, rationale="Run tests.")
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.RUN_TESTS,
+            status=ObservationStatus.ERROR,
+            summary="Tests still failed.",
+        )
+    )
+
+    decision = StructuredLLMPolicy(NoCallModel()).decide(state)
+
+    assert decision.action.tool is ToolName.RESTORE_FILE
+    assert decision.action.arguments == {"relative_path": "src/calculator.py"}
+
+
+def test_restore_success_reads_clean_file_before_retry() -> None:
+    state = read_state()
+    state.actions.append(
+        ToolAction(
+            tool=ToolName.RESTORE_FILE,
+            arguments={"relative_path": "src/calculator.py"},
+            rationale="Restore failed patch.",
+        )
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.RESTORE_FILE,
+            status=ObservationStatus.OK,
+            summary="Restored.",
+        )
+    )
+
+    decision = StructuredLLMPolicy(NoCallModel()).decide(state)
+
+    assert decision.action.tool is ToolName.READ_FILE
+    assert decision.action.arguments == {"relative_path": "src/calculator.py"}
+
+
+def test_policy_error_keeps_raw_response() -> None:
+    policy = StructuredLLMPolicy(FakeModel("```text\nno source change\n```"))
+
+    with pytest.raises(PolicyResponseError) as exc_info:
+        policy.decide(read_state())
+
+    assert exc_info.value.raw_response is not None
+    assert "no source change" in exc_info.value.raw_response

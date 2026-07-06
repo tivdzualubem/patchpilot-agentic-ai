@@ -9,7 +9,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "report_assets"
 
@@ -35,9 +34,9 @@ def save_table_png(path: Path, rows: list[dict[str, object]], title: str) -> Non
     columns = list(rows[0])
     cell_text = []
     for row in rows:
-        cell_text.append([
-            "\n".join(textwrap.wrap(str(row[col]), width=28)) for col in columns
-        ])
+        cell_text.append(
+            ["\n".join(textwrap.wrap(str(row[col]), width=28)) for col in columns]
+        )
 
     fig_height = max(2.8, 0.42 * len(rows) + 1.4)
     fig, ax = plt.subplots(figsize=(12, fig_height))
@@ -70,13 +69,15 @@ def load_benchmark_catalog() -> list[dict[str, object]]:
     for task_path in sorted((ROOT / "benchmarks").glob("*/task.json")):
         data = json.loads(task_path.read_text(encoding="utf-8"))
         metadata = data.get("metadata", {})
-        rows.append({
-            "Task": data["task_id"],
-            "Category": metadata.get("category", "repair"),
-            "Difficulty": metadata.get("difficulty", "unknown"),
-            "Initial failures": metadata.get("initial_failures", ""),
-            "Editable paths": ", ".join(data.get("allowed_paths", [])),
-        })
+        rows.append(
+            {
+                "Task": data["task_id"],
+                "Category": metadata.get("category", "repair"),
+                "Difficulty": metadata.get("difficulty", "unknown"),
+                "Initial failures": metadata.get("initial_failures", ""),
+                "Editable paths": ", ".join(data.get("allowed_paths", [])),
+            }
+        )
     return rows
 
 
@@ -89,17 +90,23 @@ def load_eval_summary() -> list[dict[str, object]]:
     rows = []
     for label, directory in dirs:
         summary = read_csv(directory / "summary.csv")[0]
-        rows.append({
-            "Condition": label,
-            "Runs": summary["runs"],
-            "Successes": summary["successes"],
-            "Repair rate": f"{float(summary['repair_rate']) * 100:.1f}%",
-            "Full-suite pass rate": f"{float(summary['full_suite_pass_rate']) * 100:.1f}%",
-            "Invalid patch rate": f"{float(summary['invalid_patch_rate']) * 100:.1f}%",
-            "Budget exhaustions": summary["budget_exhaustions"],
-            "Escalations": summary["escalations"],
-            "Mean patch attempts": f"{float(summary['mean_patch_attempts']):.2f}",
-        })
+        rows.append(
+            {
+                "Condition": label,
+                "Runs": summary["runs"],
+                "Successes": summary["successes"],
+                "Repair rate": f"{float(summary['repair_rate']) * 100:.1f}%",
+                "Full-suite pass rate": (
+                    f"{float(summary['full_suite_pass_rate']) * 100:.1f}%"
+                ),
+                "Invalid patch rate": (
+                    f"{float(summary['invalid_patch_rate']) * 100:.1f}%"
+                ),
+                "Budget exhaustions": summary["budget_exhaustions"],
+                "Escalations": summary["escalations"],
+                "Mean patch attempts": f"{float(summary['mean_patch_attempts']):.2f}",
+            }
+        )
     return rows
 
 
@@ -188,12 +195,19 @@ def draw_architecture() -> None:
     for text, x, y in boxes:
         ax.add_patch(plt.Rectangle((x, y), 0.18, 0.18, fill=False, linewidth=1.8))
         ax.text(x + 0.09, y + 0.09, text, ha="center", va="center", fontsize=10)
-    arrows = [((0.24, 0.74), (0.28, 0.74)), ((0.46, 0.74), (0.50, 0.74)),
-              ((0.68, 0.74), (0.72, 0.74)), ((0.81, 0.65), (0.81, 0.43)),
-              ((0.72, 0.34), (0.68, 0.34)), ((0.50, 0.34), (0.46, 0.34)),
-              ((0.37, 0.43), (0.37, 0.65))]
+    arrows = [
+        ((0.24, 0.74), (0.28, 0.74)),
+        ((0.46, 0.74), (0.50, 0.74)),
+        ((0.68, 0.74), (0.72, 0.74)),
+        ((0.81, 0.65), (0.81, 0.43)),
+        ((0.72, 0.34), (0.68, 0.34)),
+        ((0.50, 0.34), (0.46, 0.34)),
+        ((0.37, 0.43), (0.37, 0.65)),
+    ]
     for start, end in arrows:
-        ax.annotate("", xy=end, xytext=start, arrowprops={"arrowstyle": "->", "lw": 1.5})
+        ax.annotate(
+            "", xy=end, xytext=start, arrowprops={"arrowstyle": "->", "lw": 1.5}
+        )
     ax.set_title("PatchPilot System Architecture", fontsize=16, fontweight="bold")
     fig.tight_layout()
     fig.savefig(OUT / "fig_architecture_diagram.png", dpi=220)
@@ -206,6 +220,7 @@ def draw_workflow() -> None:
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.axis("off")
     import math
+
     coords = []
     for step, angle in zip(steps, angles, strict=True):
         rad = math.radians(angle)
@@ -216,9 +231,13 @@ def draw_workflow() -> None:
         ax.text(x, y, step, ha="center", va="center", fontsize=11, fontweight="bold")
     for i, start in enumerate(coords):
         end = coords[(i + 1) % len(coords)]
-        ax.annotate("", xy=end, xytext=start, arrowprops={"arrowstyle": "->", "lw": 1.5})
+        ax.annotate(
+            "", xy=end, xytext=start, arrowprops={"arrowstyle": "->", "lw": 1.5}
+        )
     ax.text(0.5, 0.5, "bounded\nrepair loop", ha="center", va="center", fontsize=12)
-    ax.set_title("Plan–Act–Observe–Reflect–Verify Workflow", fontsize=15, fontweight="bold")
+    ax.set_title(
+        "Plan–Act–Observe–Reflect–Verify Workflow", fontsize=15, fontweight="bold"
+    )
     fig.tight_layout()
     fig.savefig(OUT / "fig_agent_workflow_loop.png", dpi=220)
     plt.close(fig)
@@ -231,14 +250,52 @@ def main() -> None:
     summary_rows = load_eval_summary()
 
     compliance_rows = [
-        {"Proposal item": "Tool-using debugging agent", "Status": "Met", "Evidence": "Restricted repository tools, patching, pytest verification"},
-        {"Proposal item": "Plan-Act-Observe-Reflect-Verify loop", "Status": "Met", "Evidence": "Trace records test, search, read, patch, verify, finish steps"},
-        {"Proposal item": "Isolated workspace and safety boundaries", "Status": "Met", "Evidence": "Disposable workspaces, allowed paths, forbidden tests, rollback"},
-        {"Proposal item": "Open local model backend", "Status": "Met", "Evidence": "Ollama with Qwen2.5-Coder 1.5B"},
-        {"Proposal item": "12-18 repair tasks", "Status": "Met", "Evidence": "PatchPilot-Bench v0 contains 12 tasks"},
-        {"Proposal item": "Baseline/ablation comparison", "Status": "Met", "Evidence": "One-shot baseline and no-retry ablation compared to full agent"},
-        {"Proposal item": "Metrics and statistical analysis", "Status": "Met", "Evidence": "Repair rate, pass rate, invalid patches, budgets, McNemar test"},
-        {"Proposal item": "Demo/repo/report deliverables", "Status": "Met", "Evidence": "GitHub repo, Dockerized Streamlit demo, Hugging Face Space"},
+        {
+            "Proposal item": "Tool-using debugging agent",
+            "Status": "Met",
+            "Evidence": "Restricted repository tools, patching, pytest verification",
+        },
+        {
+            "Proposal item": "Plan-Act-Observe-Reflect-Verify loop",
+            "Status": "Met",
+            "Evidence": "Trace records test, search, read, patch, verify, finish steps",
+        },
+        {
+            "Proposal item": "Isolated workspace and safety boundaries",
+            "Status": "Met",
+            "Evidence": (
+                "Disposable workspaces, allowed paths, forbidden tests, rollback"
+            ),
+        },
+        {
+            "Proposal item": "Open local model backend",
+            "Status": "Met",
+            "Evidence": "Ollama with Qwen2.5-Coder 1.5B",
+        },
+        {
+            "Proposal item": "12-18 repair tasks",
+            "Status": "Met",
+            "Evidence": "PatchPilot-Bench v0 contains 12 tasks",
+        },
+        {
+            "Proposal item": "Baseline/ablation comparison",
+            "Status": "Met",
+            "Evidence": (
+                "One-shot baseline and no-retry ablation compared to full agent"
+            ),
+        },
+        {
+            "Proposal item": "Metrics and statistical analysis",
+            "Status": "Met",
+            "Evidence": (
+                "Repair rate, pass rate, invalid patches, budgets, McNemar test"
+            ),
+        },
+        {
+            "Proposal item": "Demo/repo/report deliverables",
+            "Status": "Met",
+            "Evidence": "GitHub repo, Dockerized Streamlit demo, Hugging Face Space",
+        },
     ]
 
     stats_rows = [
@@ -256,10 +313,24 @@ def main() -> None:
     write_csv(OUT / "table_proposal_compliance.csv", compliance_rows)
     write_csv(OUT / "table_statistical_analysis.csv", stats_rows)
 
-    save_table_png(OUT / "table_benchmark_catalog.png", benchmark_rows, "PatchPilot-Bench v0 Catalog")
-    save_table_png(OUT / "table_evaluation_summary.png", summary_rows, "Evaluation Summary")
-    save_table_png(OUT / "table_proposal_compliance.png", compliance_rows, "Proposal Compliance Audit")
-    save_table_png(OUT / "table_statistical_analysis.png", stats_rows, "Statistical Analysis Summary")
+    save_table_png(
+        OUT / "table_benchmark_catalog.png",
+        benchmark_rows,
+        "PatchPilot-Bench v0 Catalog",
+    )
+    save_table_png(
+        OUT / "table_evaluation_summary.png", summary_rows, "Evaluation Summary"
+    )
+    save_table_png(
+        OUT / "table_proposal_compliance.png",
+        compliance_rows,
+        "Proposal Compliance Audit",
+    )
+    save_table_png(
+        OUT / "table_statistical_analysis.png",
+        stats_rows,
+        "Statistical Analysis Summary",
+    )
 
     plot_repair_rates(summary_rows)
     plot_failure_modes(summary_rows)

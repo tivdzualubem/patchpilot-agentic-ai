@@ -31,9 +31,7 @@ class AgentControlLoop:
             return
 
         if run_id is None:
-            raise ValueError(
-                "run_id is required when trace recording is enabled."
-            )
+            raise ValueError("run_id is required when trace recording is enabled.")
 
         self.recorder.save(state, run_id, metadata)
 
@@ -51,9 +49,12 @@ class AgentControlLoop:
                 decision = self.policy.decide(state)
             except Exception as exc:
                 state.status = AgentStatus.ESCALATED
+                detail = str(exc).strip()
+                raw_response = getattr(exc, "raw_response", None)
+                if raw_response:
+                    detail = f"{detail} Raw response: {raw_response[:500]}"
                 state.final_message = (
-                    "The decision policy failed safely: "
-                    f"{type(exc).__name__}."
+                    f"The decision policy failed safely: {type(exc).__name__}: {detail}"
                 )
                 self._checkpoint(state, run_id, metadata)
                 return state
@@ -64,13 +65,8 @@ class AgentControlLoop:
             if decision.hypothesis is not None:
                 state.current_hypothesis = decision.hypothesis
 
-            if (
-                decision.reflection is not None
-                and state.current_hypothesis is not None
-            ):
-                state.rejected_hypotheses.append(
-                    decision.reflection
-                )
+            if decision.reflection is not None and state.current_hypothesis is not None:
+                state.rejected_hypotheses.append(decision.reflection)
 
             self.executor.execute(state, decision.action)
             self._checkpoint(state, run_id, metadata)
@@ -89,9 +85,7 @@ class AgentControlLoop:
             AgentStatus.ESCALATED,
         }:
             state.status = AgentStatus.BUDGET_EXHAUSTED
-            state.final_message = (
-                "The configured execution budget was exhausted."
-            )
+            state.final_message = "The configured execution budget was exhausted."
             self._checkpoint(state, run_id, metadata)
 
         return state
