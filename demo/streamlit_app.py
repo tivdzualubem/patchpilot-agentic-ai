@@ -8,27 +8,10 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
 import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BENCHMARKS = PROJECT_ROOT / "benchmarks"
-DEMO_DATA = PROJECT_ROOT / "demo" / "data"
-DOCS = PROJECT_ROOT / "docs"
-
-
-def read_markdown(path: Path) -> str:
-    """Read Markdown content when available."""
-    if not path.is_file():
-        return ""
-    return path.read_text(encoding="utf-8")
-
-
-def read_csv(path: Path) -> pd.DataFrame:
-    """Read a CSV file when available."""
-    if not path.is_file():
-        return pd.DataFrame()
-    return pd.read_csv(path)
 
 
 def manifests() -> list[dict[str, Any]]:
@@ -215,11 +198,11 @@ def render_task_selector() -> dict[str, Any]:
 
 def render_interactive_demo() -> None:
     """Render the main interactive repair prototype."""
-    st.header("Interactive repair prototype")
+    st.header("Live PatchPilot repair demo")
     st.write(
-        "Select a broken benchmark task, inspect the failing code and tests, "
-        "then run PatchPilot locally. The UI displays the agent trace, patch "
-        "diff, changed files, and verification result."
+        "Choose a prepared buggy Python task, inspect the code and tests, "
+        "then run the actual PatchPilot agent. The demo shows the tool "
+        "trace, generated patch diff, and pytest-verified final status."
     )
 
     task = render_task_selector()
@@ -238,18 +221,15 @@ def render_interactive_demo() -> None:
     st.subheader("Run the agent")
 
     model_options = {
-        "qwen2.5-coder:1.5b": "Validated local model used in reported results",
-        "qwen2.5-coder:3b": "Experimental stronger local model",
+        "qwen2.5-coder:1.5b": "Default local demo model",
+        "qwen2.5-coder:3b": "Optional stronger local model",
     }
     model = st.selectbox(
         "Ollama model",
         options=list(model_options),
         format_func=lambda value: f"{value} — {model_options[value]}",
         index=0,
-        help=(
-            "Only qwen2.5-coder:1.5b is part of the reported evaluation. "
-            "Other models are optional local experiments."
-        ),
+        help="The selected Ollama model is used for this live repair run.",
     )
     st.info(
         "This runs the actual PatchPilot repair pipeline: tests fail, source "
@@ -279,8 +259,12 @@ def render_interactive_demo() -> None:
         m3.metric("Patch attempts", str(result["patch_attempts"]))
         m4.metric("Changed files", str(len(result["changed_files"])))
 
-        st.caption(f"Workspace: `{result['workspace']}`")
-        st.caption(f"Trace: `{result['trace']}`")
+        if result.get("final_message"):
+            st.info(str(result["final_message"]))
+
+        with st.expander("Run artifacts", expanded=False):
+            st.caption(f"Workspace: `{result['workspace']}`")
+            st.caption(f"Trace: `{result['trace']}`")
 
         trace_path = Path(str(result["trace"]))
         if trace_path.is_file():
@@ -293,108 +277,6 @@ def render_interactive_demo() -> None:
             repaired_root=repaired_root,
             changed_files=list(result["changed_files"]),
         )
-
-
-def render_evaluation() -> None:
-    """Render evaluation dashboard."""
-    st.header("Evaluation evidence")
-    summary = read_csv(DEMO_DATA / "summary.csv")
-    full_runs = read_csv(DEMO_DATA / "full_agent_runs.csv")
-    no_retry = read_csv(DEMO_DATA / "no_retry_runs.csv")
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Full-agent repair rate", "100.0%", "12/12 tasks")
-    c2.metric("No-retry repair rate", "66.7%", "8/12 tasks")
-    c3.metric("Invalid patch rate", "0.0%", "Full agent")
-    c4.metric("Benchmark tasks", "12", "PatchPilot-Bench v0")
-
-    chart = summary[
-        [
-            "condition",
-            "repair_rate",
-            "full_suite_pass_rate",
-            "invalid_patch_rate",
-        ]
-    ].set_index("condition")
-    st.bar_chart(chart)
-
-    st.subheader("Condition summary")
-    st.dataframe(summary, use_container_width=True)
-
-    st.subheader("Full-agent per-task results")
-    st.dataframe(full_runs, use_container_width=True)
-
-    st.subheader("No-retry ablation per-task results")
-    st.dataframe(no_retry, use_container_width=True)
-
-    st.markdown(read_markdown(DOCS / "evaluation_comparison.md"))
-
-
-def render_catalog() -> None:
-    """Render benchmark catalog page."""
-    st.header("PatchPilot-Bench v0 catalog")
-    rows = []
-    for task in manifests():
-        rows.append(
-            {
-                "task_id": task["task_id"],
-                "title": task["title"],
-                "category": task["defect_category"],
-                "difficulty": task["difficulty"],
-                "initial_failures": task["expected_initial_failures"],
-                "allowed_paths": ", ".join(task["allowed_paths"]),
-                "forbidden_paths": ", ".join(task["forbidden_paths"]),
-            }
-        )
-    st.dataframe(pd.DataFrame(rows), use_container_width=True)
-
-
-def render_architecture() -> None:
-    """Render architecture explanation page."""
-    st.header("Architecture")
-    st.code(
-        """
-Benchmark task
-  ↓
-Agent state
-  ↓
-Structured LLM policy
-  ↓
-Validated tool action
-  ↓
-Restricted tool executor
-  ├─ run_tests
-  ├─ search_code
-  ├─ read_file
-  ├─ apply_patch
-  ├─ restore_file
-  └─ finish
-  ↓
-Tool observation + trace
-  ↓
-Verified success / bounded failure / escalation
-""",
-        language="text",
-    )
-    st.markdown(read_markdown(PROJECT_ROOT / "README.md"))
-
-
-def render_statistics() -> None:
-    """Render statistical analysis page."""
-    st.header("Statistical analysis")
-    st.markdown(read_markdown(DOCS / "statistical_analysis.md"))
-
-
-def render_deployment() -> None:
-    """Render deployment page."""
-    st.header("Docker and deployment")
-    st.write(
-        "The same frontend can be used as a public results demo or as a "
-        "local live prototype. Docker packages the app and repository. Live "
-        "repair requires Ollama access from the running environment."
-    )
-    st.code("docker compose up --build", language="bash")
-    st.code("http://localhost:8501", language="text")
 
 
 def main() -> None:
@@ -450,30 +332,14 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    page = st.sidebar.radio(
-        "Navigation",
-        [
-            "Interactive repair demo",
-            "Evaluation evidence",
-            "Benchmark catalog",
-            "Architecture",
-            "Statistical analysis",
-            "Docker/deployment",
-        ],
-    )
+    with st.sidebar:
+        st.header("Demo flow")
+        st.write("1. Choose a prepared buggy task.")
+        st.write("2. Inspect source and regression tests.")
+        st.write("3. Run PatchPilot live.")
+        st.write("4. Review tool trace, patch diff, and verification.")
 
-    if page == "Interactive repair demo":
-        render_interactive_demo()
-    elif page == "Evaluation evidence":
-        render_evaluation()
-    elif page == "Benchmark catalog":
-        render_catalog()
-    elif page == "Architecture":
-        render_architecture()
-    elif page == "Statistical analysis":
-        render_statistics()
-    else:
-        render_deployment()
+    render_interactive_demo()
 
     st.divider()
     st.caption(
