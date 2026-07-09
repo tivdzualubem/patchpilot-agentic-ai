@@ -66,7 +66,7 @@ class OneShotRepairPolicy(StructuredLLMPolicy):
                 tool=ToolName.SEARCH_CODE,
                 arguments={
                     "query": self._failure_query(state),
-                    "relative_path": "src",
+                    "relative_path": state.task.allowed_paths[0],
                 },
                 rationale="Find the likely defective source implementation.",
             )
@@ -79,7 +79,10 @@ class OneShotRepairPolicy(StructuredLLMPolicy):
                 )
 
             try:
-                relative_path = self._source_path_from_search(last_observation.output)
+                relative_path = self._source_path_from_search(
+                    last_observation.output,
+                    state.task.allowed_paths,
+                )
             except PolicyResponseError:
                 return self._finish(
                     "escalated",
@@ -147,9 +150,12 @@ def budget_for_condition(condition: str) -> ExecutionBudget:
     )
 
 
-def benchmark_manifests(project_root: Path) -> list[Path]:
+def benchmark_manifests(project_root: Path, manifest_root: str) -> list[Path]:
     """Return all benchmark manifests in stable order."""
-    return sorted((project_root / "benchmarks").glob("*/task.json"))
+    root = Path(manifest_root)
+    if not root.is_absolute():
+        root = project_root / root
+    return sorted(root.glob("*/task.json"))
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
@@ -191,6 +197,11 @@ def parse_args() -> argparse.Namespace:
         default="artifacts/evaluation",
         help="Directory for workspaces, traces, and metric files.",
     )
+    parser.add_argument(
+        "--manifest-root",
+        default="benchmarks",
+        help="Directory containing benchmark task folders.",
+    )
     return parser.parse_args()
 
 
@@ -201,7 +212,7 @@ def main() -> None:
     timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     result_root = output_root / timestamp
 
-    manifests = benchmark_manifests(project_root)
+    manifests = benchmark_manifests(project_root, args.manifest_root)
     if args.limit is not None:
         manifests = manifests[: args.limit]
 
