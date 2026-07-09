@@ -1,3 +1,0 @@
-condition,runs,successes,full_suite_passes,repair_rate,full_suite_pass_rate,invalid_patch_runs,invalid_patch_rate,budget_exhaustions,escalations,failures,mean_steps,mean_tool_calls,mean_patch_attempts,mean_elapsed_seconds
-full-agent-live-qwen,12,12,12,1.0,1.0,0,0.0,0,0,0,5.75,5.75,1.25,40.14
-no-retry-live-qwen,12,8,8,0.6666666667,0.6666666667,0,0.0,4,0,0,5.3333333333,5.3333333333,1.0,37.07
