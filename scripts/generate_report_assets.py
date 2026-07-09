@@ -1,351 +1,401 @@
-"""Generate PatchPilot report figures, plots, and tables from project data."""
+"""Generate final PatchPilot report tables and figures."""
 
 from __future__ import annotations
 
-import csv
 import json
-import textwrap
+import math
+from collections import Counter
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
+RESULTS = ROOT / "results"
 OUT = ROOT / "docs" / "report_assets"
 
-FULL_DIR = ROOT / "artifacts" / "evaluation" / "20260704-091749"
-NO_RETRY_DIR = ROOT / "artifacts" / "evaluation" / "20260704-094853"
-ONE_SHOT_DIR = ROOT / "artifacts" / "evaluation" / "20260704-135312"
+LABELS = {
+    "full-live-qwen": "Full agent",
+    "one-shot-live-qwen": "One-shot",
+    "no-retry-live-qwen": "No-retry",
+    "official-harness-smoke": "Official harness smoke",
+    "controlled": "Controlled",
+    "mutmut": "Mutmut",
+    "quixbugs": "QuixBugs",
+    "swebench-lite": "SWE-bench Lite",
+}
 
 
-def read_csv(path: Path) -> list[dict[str, str]]:
-    with path.open(encoding="utf-8", newline="") as handle:
-        return list(csv.DictReader(handle))
+def label(value: str) -> str:
+    """Return a display label."""
+    return LABELS.get(value, value)
 
 
-def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
+def pct(value: object) -> str:
+    """Format a unit rate as percent."""
+    if value == "" or pd.isna(value):
+        return ""
+    return f"{float(value) * 100:.1f}%"
 
 
-def save_table_png(path: Path, rows: list[dict[str, object]], title: str) -> None:
-    columns = list(rows[0])
-    cell_text = []
-    for row in rows:
-        cell_text.append(
-            ["\n".join(textwrap.wrap(str(row[col]), width=28)) for col in columns]
-        )
-
-    fig_height = max(2.8, 0.42 * len(rows) + 1.4)
-    fig, ax = plt.subplots(figsize=(12, fig_height))
-    ax.axis("off")
-    ax.set_title(title, fontsize=15, fontweight="bold", pad=18)
-
-    table = ax.table(
-        cellText=cell_text,
-        colLabels=columns,
-        loc="center",
-        cellLoc="left",
-        colLoc="left",
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(8)
-    table.scale(1, 1.45)
-
-    for (row_idx, _col_idx), cell in table.get_celld().items():
-        if row_idx == 0:
-            cell.set_text_props(weight="bold")
-        cell.set_edgecolor("0.75")
-
-    fig.tight_layout()
-    fig.savefig(path, dpi=220, bbox_inches="tight")
-    plt.close(fig)
+def num(value: object) -> str:
+    """Format a numeric value or blank."""
+    if value == "" or pd.isna(value):
+        return ""
+    value = float(value)
+    if value.is_integer():
+        return str(int(value))
+    return f"{value:.2f}"
 
 
-def load_benchmark_catalog() -> list[dict[str, object]]:
-    rows = []
-    for task_path in sorted((ROOT / "benchmarks").glob("*/task.json")):
-        data = json.loads(task_path.read_text(encoding="utf-8"))
-        metadata = data.get("metadata", {})
-        rows.append(
+def short_task(task_id: str) -> str:
+    """Shorten a mutmut task id for figures."""
+    marker = "core-x-"
+    if marker not in task_id:
+        return task_id
+    return task_id.split(marker, 1)[1].rsplit("-mutmut-", 1)[0]
+
+
+def write_md_table(path: Path, frame: pd.DataFrame) -> None:
+    """Write a small markdown table."""
+    lines = []
+    headers = list(frame.columns)
+    lines.append("| " + " | ".join(headers) + " |")
+    lines.append("| " + " | ".join("---" for _ in headers) + " |")
+    for _, row in frame.iterrows():
+        values = [str(row[col]).replace("|", "\\|") for col in headers]
+        lines.append("| " + " | ".join(values) + " |")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def save_table(name: str, frame: pd.DataFrame) -> None:
+    """Save a table to results and report assets."""
+    frame.to_csv(RESULTS / f"{name}.csv", index=False)
+    frame.to_csv(OUT / f"table_{name}.csv", index=False)
+    write_md_table(OUT / f"table_{name}.md", frame)
+
+
+def save_fig(name: str) -> None:
+    """Save the current matplotlib figure."""
+    plt.tight_layout()
+    plt.savefig(OUT / f"{name}.png", dpi=220, bbox_inches="tight")
+    plt.savefig(OUT / f"{name}.svg", bbox_inches="tight")
+    plt.close()
+
+
+def mcnemar(frame: pd.DataFrame, a: str, b: str) -> dict[str, object]:
+    """Exact paired McNemar/binomial sign test."""
+    a_col = f"{a}_succeeded"
+    b_col = f"{b}_succeeded"
+    a_only = int((frame[a_col] & ~frame[b_col]).sum())
+    b_only = int((~frame[a_col] & frame[b_col]).sum())
+    discordant = a_only + b_only
+    if discordant == 0:
+        p_value = 1.0
+    else:
+        k = min(a_only, b_only)
+        tail = sum(math.comb(discordant, i) for i in range(k + 1))
+        p_value = min(1.0, 2 * tail / (2**discordant))
+
+    return {
+        "comparison": f"{a.replace('_', ' ')} vs {b.replace('_', ' ')}",
+        "first_only_successes": a_only,
+        "second_only_successes": b_only,
+        "discordant_pairs": discordant,
+        "exact_p_value": f"{p_value:.4f}",
+    }
+
+
+def build_tables(summary: pd.DataFrame, paired: pd.DataFrame) -> None:
+    """Build all CSV and markdown tables."""
+    final = summary.copy()
+    final["benchmark"] = final["benchmark"].map(label)
+    final["condition"] = final["condition"].map(label)
+    final["repair_rate"] = final["repair_rate"].map(pct)
+    final["full_suite_pass_rate"] = final["full_suite_pass_rate"].map(pct)
+    final["invalid_patch_rate"] = final["invalid_patch_rate"].map(pct)
+    final["budget_exhaustions"] = final["budget_exhaustions"].map(num)
+    final["escalations"] = final["escalations"].map(num)
+    save_table("final_evaluation_summary", final)
+
+    suite = pd.DataFrame(
+        [
             {
-                "Task": data["task_id"],
-                "Category": metadata.get("category", "repair"),
-                "Difficulty": metadata.get("difficulty", "unknown"),
-                "Initial failures": metadata.get("initial_failures", ""),
-                "Editable paths": ", ".join(data.get("allowed_paths", [])),
-            }
-        )
-    return rows
-
-
-def load_eval_summary() -> list[dict[str, object]]:
-    dirs = [
-        ("Full agent", FULL_DIR),
-        ("One-shot baseline", ONE_SHOT_DIR),
-        ("No-retry ablation", NO_RETRY_DIR),
-    ]
-    rows = []
-    for label, directory in dirs:
-        summary = read_csv(directory / "summary.csv")[0]
-        rows.append(
+                "benchmark": "Controlled",
+                "role": "End-to-end sanity benchmark",
+                "tasks": 12,
+                "main_result": "12/12 for all variants",
+            },
             {
-                "Condition": label,
-                "Runs": summary["runs"],
-                "Successes": summary["successes"],
-                "Repair rate": f"{float(summary['repair_rate']) * 100:.1f}%",
-                "Full-suite pass rate": (
-                    f"{float(summary['full_suite_pass_rate']) * 100:.1f}%"
-                ),
-                "Invalid patch rate": (
-                    f"{float(summary['invalid_patch_rate']) * 100:.1f}%"
-                ),
-                "Budget exhaustions": summary["budget_exhaustions"],
-                "Escalations": summary["escalations"],
-                "Mean patch attempts": f"{float(summary['mean_patch_attempts']):.2f}",
-            }
-        )
-    return rows
-
-
-def load_full_runs() -> list[dict[str, str]]:
-    return read_csv(FULL_DIR / "runs.csv")
-
-
-def plot_repair_rates(rows: list[dict[str, object]]) -> None:
-    labels = [str(row["Condition"]) for row in rows]
-    rates = [float(str(row["Repair rate"]).rstrip("%")) for row in rows]
-
-    fig, ax = plt.subplots(figsize=(9, 5))
-    ax.bar(labels, rates)
-    ax.set_ylabel("Repair rate (%)")
-    ax.set_ylim(0, 110)
-    ax.set_title("Repair Rate by Evaluation Condition", fontweight="bold")
-    for index, value in enumerate(rates):
-        ax.text(index, value + 2, f"{value:.1f}%", ha="center")
-    fig.tight_layout()
-    fig.savefig(OUT / "plot_repair_rate_comparison.png", dpi=220)
-    plt.close(fig)
-
-
-def plot_failure_modes(rows: list[dict[str, object]]) -> None:
-    labels = [str(row["Condition"]) for row in rows]
-    budget = [int(row["Budget exhaustions"]) for row in rows]
-    escalations = [int(row["Escalations"]) for row in rows]
-
-    fig, ax = plt.subplots(figsize=(9, 5))
-    x = range(len(labels))
-    ax.bar([i - 0.18 for i in x], budget, width=0.36, label="Budget exhaustion")
-    ax.bar([i + 0.18 for i in x], escalations, width=0.36, label="Escalation")
-    ax.set_xticks(list(x), labels)
-    ax.set_ylabel("Runs")
-    ax.set_title("Failure Modes by Condition", fontweight="bold")
-    ax.legend()
-    fig.tight_layout()
-    fig.savefig(OUT / "plot_failure_modes.png", dpi=220)
-    plt.close(fig)
-
-
-def plot_patch_attempts() -> None:
-    runs = load_full_runs()
-    labels = [row["task_id"] for row in runs]
-    attempts = [float(row["patch_attempts"]) for row in runs]
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.bar(labels, attempts)
-    ax.set_ylabel("Patch attempts")
-    ax.set_title("Full-Agent Patch Attempts by Task", fontweight="bold")
-    ax.tick_params(axis="x", rotation=45)
-    fig.tight_layout()
-    fig.savefig(OUT / "plot_patch_attempts_by_task.png", dpi=220)
-    plt.close(fig)
-
-
-def plot_paired_success() -> None:
-    rows = [
-        {"Outcome": "Both succeeded", "Count": 8},
-        {"Outcome": "Full agent only", "Count": 4},
-        {"Outcome": "One-shot only", "Count": 0},
-        {"Outcome": "Both failed", "Count": 0},
-    ]
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.bar([r["Outcome"] for r in rows], [r["Count"] for r in rows])
-    ax.set_ylabel("Tasks")
-    ax.set_title("Paired Success Outcomes", fontweight="bold")
-    ax.tick_params(axis="x", rotation=20)
-    fig.tight_layout()
-    fig.savefig(OUT / "plot_paired_task_success.png", dpi=220)
-    plt.close(fig)
-
-
-def draw_architecture() -> None:
-    boxes = [
-        ("Benchmark task", 0.06, 0.65),
-        ("Agent state\nbudget + trace", 0.28, 0.65),
-        ("Policy\nQwen via Ollama", 0.50, 0.65),
-        ("Restricted tools", 0.72, 0.65),
-        ("Isolated workspace", 0.28, 0.25),
-        ("Patch manager\nrollback + diff", 0.50, 0.25),
-        ("Pytest verification", 0.72, 0.25),
-    ]
-    fig, ax = plt.subplots(figsize=(12, 5))
-    ax.axis("off")
-    for text, x, y in boxes:
-        ax.add_patch(plt.Rectangle((x, y), 0.18, 0.18, fill=False, linewidth=1.8))
-        ax.text(x + 0.09, y + 0.09, text, ha="center", va="center", fontsize=10)
-    arrows = [
-        ((0.24, 0.74), (0.28, 0.74)),
-        ((0.46, 0.74), (0.50, 0.74)),
-        ((0.68, 0.74), (0.72, 0.74)),
-        ((0.81, 0.65), (0.81, 0.43)),
-        ((0.72, 0.34), (0.68, 0.34)),
-        ((0.50, 0.34), (0.46, 0.34)),
-        ((0.37, 0.43), (0.37, 0.65)),
-    ]
-    for start, end in arrows:
-        ax.annotate(
-            "", xy=end, xytext=start, arrowprops={"arrowstyle": "->", "lw": 1.5}
-        )
-    ax.set_title("PatchPilot System Architecture", fontsize=16, fontweight="bold")
-    fig.tight_layout()
-    fig.savefig(OUT / "fig_architecture_diagram.png", dpi=220)
-    plt.close(fig)
-
-
-def draw_workflow() -> None:
-    steps = ["Plan", "Act", "Observe", "Reflect", "Verify"]
-    angles = [90, 18, -54, -126, 162]
-    fig, ax = plt.subplots(figsize=(7, 7))
-    ax.axis("off")
-    import math
-
-    coords = []
-    for step, angle in zip(steps, angles, strict=True):
-        rad = math.radians(angle)
-        x = 0.5 + 0.33 * math.cos(rad)
-        y = 0.5 + 0.33 * math.sin(rad)
-        coords.append((x, y))
-        ax.add_patch(plt.Circle((x, y), 0.10, fill=False, linewidth=2))
-        ax.text(x, y, step, ha="center", va="center", fontsize=11, fontweight="bold")
-    for i, start in enumerate(coords):
-        end = coords[(i + 1) % len(coords)]
-        ax.annotate(
-            "", xy=end, xytext=start, arrowprops={"arrowstyle": "->", "lw": 1.5}
-        )
-    ax.text(0.5, 0.5, "bounded\nrepair loop", ha="center", va="center", fontsize=12)
-    ax.set_title(
-        "Plan–Act–Observe–Reflect–Verify Workflow", fontsize=15, fontweight="bold"
+                "benchmark": "Mutmut-generated",
+                "role": "Primary ablation benchmark",
+                "tasks": 20,
+                "main_result": "Full 8/20; one-shot 6/20; no-retry 5/20",
+            },
+            {
+                "benchmark": "QuixBugs smoke",
+                "role": "External generalization check",
+                "tasks": 8,
+                "main_result": "3/8 repaired",
+            },
+            {
+                "benchmark": "SWE-bench Lite",
+                "role": "Official harness feasibility check",
+                "tasks": 1,
+                "main_result": "Blocked by local WSL/Docker I/O instability",
+            },
+        ]
     )
-    fig.tight_layout()
-    fig.savefig(OUT / "fig_agent_workflow_loop.png", dpi=220)
-    plt.close(fig)
+    save_table("benchmark_suite_summary", suite)
+
+    outcomes = pd.DataFrame(
+        {
+            "task": [short_task(v) for v in paired["task_id"]],
+            "full_agent": paired["full_succeeded"].map(
+                {True: "pass", False: "fail"}
+            ),
+            "one_shot": paired["one_shot_succeeded"].map(
+                {True: "pass", False: "fail"}
+            ),
+            "no_retry": paired["no_retry_succeeded"].map(
+                {True: "pass", False: "fail"}
+            ),
+            "full_status": paired["full_status"],
+            "one_shot_status": paired["one_shot_status"],
+            "no_retry_status": paired["no_retry_status"],
+        }
+    )
+    save_table("mutmut_task_outcomes_summary", outcomes)
+
+    tests = pd.DataFrame(
+        [
+            mcnemar(paired, "full", "one_shot"),
+            mcnemar(paired, "full", "no_retry"),
+            mcnemar(paired, "one_shot", "no_retry"),
+        ]
+    )
+    save_table("statistical_tests", tests)
+
+    status_rows = []
+    for prefix, name in [
+        ("full", "Full agent"),
+        ("one_shot", "One-shot"),
+        ("no_retry", "No-retry"),
+    ]:
+        counts = Counter(paired[f"{prefix}_status"])
+        for status, count in sorted(counts.items()):
+            status_rows.append(
+                {"condition": name, "status": status, "count": count}
+            )
+    save_table("mutmut_status_breakdown", pd.DataFrame(status_rows))
+
+    deliverables = pd.DataFrame(
+        [
+            {
+                "deliverable": "Tool-using repair agent",
+                "repo_evidence": "src/patchpilot/agent and src/patchpilot/tools",
+            },
+            {
+                "deliverable": "Controlled benchmark",
+                "repo_evidence": "benchmarks/",
+            },
+            {
+                "deliverable": "Real mutmut benchmark",
+                "repo_evidence": "generated_benchmarks/mutmut_algorithms/",
+            },
+            {
+                "deliverable": "Evaluation scripts",
+                "repo_evidence": "scripts/run_evaluation.py",
+            },
+            {
+                "deliverable": "Live demo",
+                "repo_evidence": "demo/streamlit_app.py",
+            },
+        ]
+    )
+    save_table("project_deliverables", deliverables)
+
+
+def plot_repair_rates(summary: pd.DataFrame) -> None:
+    """Plot repair rates."""
+    keep = summary["benchmark"].isin(["controlled", "mutmut", "quixbugs"])
+    frame = summary[keep].copy()
+    frame["name"] = [
+        f"{label(b)} · {label(c)}"
+        for b, c in zip(frame["benchmark"], frame["condition"], strict=True)
+    ]
+    frame["rate"] = frame["repair_rate"].astype(float) * 100
+
+    plt.figure(figsize=(9, 5))
+    plt.barh(frame["name"][::-1], frame["rate"][::-1])
+    plt.xlabel("Repair rate (%)")
+    plt.xlim(0, 105)
+    plt.title("Repair rate across evaluated benchmarks")
+    for i, value in enumerate(frame["rate"][::-1]):
+        plt.text(value + 1, i, f"{value:.1f}%", va="center")
+    save_fig("fig_repair_rate_comparison")
+
+
+def plot_mutmut_ablation(summary: pd.DataFrame) -> None:
+    """Plot mutmut ablation repair rates."""
+    frame = summary[summary["benchmark"] == "mutmut"].copy()
+    frame["name"] = frame["condition"].map(label)
+    frame["rate"] = frame["repair_rate"].astype(float) * 100
+
+    plt.figure(figsize=(7, 4))
+    plt.bar(frame["name"], frame["rate"])
+    plt.ylabel("Repair rate (%)")
+    plt.ylim(0, 55)
+    plt.title("Mutmut ablation comparison")
+    for i, value in enumerate(frame["rate"]):
+        plt.text(i, value + 1, f"{value:.1f}%", ha="center")
+    save_fig("fig_mutmut_ablation_repair_rate")
+
+
+def plot_invalid_patch(summary: pd.DataFrame) -> None:
+    """Plot invalid patch rate."""
+    keep = summary["benchmark"].isin(["controlled", "mutmut", "quixbugs"])
+    frame = summary[keep].copy()
+    frame["name"] = [
+        f"{label(b)} · {label(c)}"
+        for b, c in zip(frame["benchmark"], frame["condition"], strict=True)
+    ]
+    frame["rate"] = frame["invalid_patch_rate"].astype(float) * 100
+
+    plt.figure(figsize=(9, 5))
+    plt.barh(frame["name"][::-1], frame["rate"][::-1])
+    plt.xlabel("Invalid patch rate (%)")
+    plt.xlim(0, 5)
+    plt.title("Safety metric: invalid patch rate")
+    for i, value in enumerate(frame["rate"][::-1]):
+        plt.text(value + 0.05, i, f"{value:.1f}%", va="center")
+    save_fig("fig_invalid_patch_rate")
+
+
+def plot_status_breakdown(paired: pd.DataFrame) -> None:
+    """Plot mutmut statuses."""
+    rows = []
+    for prefix, name in [
+        ("full", "Full agent"),
+        ("one_shot", "One-shot"),
+        ("no_retry", "No-retry"),
+    ]:
+        row = {"condition": name}
+        row.update(Counter(paired[f"{prefix}_status"]))
+        rows.append(row)
+
+    frame = pd.DataFrame(rows).fillna(0).set_index("condition")
+    ax = frame.plot(kind="bar", stacked=True, figsize=(7, 4))
+    ax.set_ylabel("Task count")
+    ax.set_title("Mutmut status breakdown")
+    ax.tick_params(axis="x", rotation=0)
+    ax.legend(title="Status", bbox_to_anchor=(1.02, 1), loc="upper left")
+    save_fig("fig_mutmut_status_breakdown")
+
+
+def plot_task_matrix(paired: pd.DataFrame) -> None:
+    """Plot task success matrix."""
+    cols = ["full_succeeded", "one_shot_succeeded", "no_retry_succeeded"]
+    matrix = paired[cols].astype(int).to_numpy()
+    tasks = [short_task(v) for v in paired["task_id"]]
+
+    fig, ax = plt.subplots(figsize=(6, 8))
+    image = ax.imshow(matrix, aspect="auto", vmin=0, vmax=1)
+    ax.set_xticks([0, 1, 2])
+    ax.set_xticklabels(["Full", "One-shot", "No-retry"])
+    ax.set_yticks(range(len(tasks)))
+    ax.set_yticklabels(tasks, fontsize=7)
+    ax.set_title("Mutmut task-level repair outcomes")
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            ax.text(j, i, "✓" if matrix[i, j] else "×", ha="center")
+    fig.colorbar(image, ax=ax, fraction=0.035, pad=0.02)
+    save_fig("fig_mutmut_task_success_matrix")
+
+
+def plot_workflow() -> None:
+    """Plot a simple PatchPilot workflow figure."""
+    steps = [
+        "Buggy task",
+        "Run tests",
+        "Inspect code",
+        "Apply bounded patch",
+        "Verify tests",
+        "Trace result",
+    ]
+
+    fig, ax = plt.subplots(figsize=(10, 2.5))
+    ax.axis("off")
+    x_positions = list(range(len(steps)))
+    for x_pos, step in zip(x_positions, steps, strict=True):
+        ax.text(
+            x_pos,
+            0.5,
+            step,
+            ha="center",
+            va="center",
+            bbox={"boxstyle": "round,pad=0.35", "fill": False},
+        )
+        if x_pos < len(steps) - 1:
+            ax.annotate(
+                "",
+                xy=(x_pos + 0.78, 0.5),
+                xytext=(x_pos + 0.22, 0.5),
+                arrowprops={"arrowstyle": "->"},
+            )
+    ax.set_xlim(-0.5, len(steps) - 0.5)
+    ax.set_ylim(0, 1)
+    save_fig("fig_agent_workflow_loop")
+
+
+def write_manifest() -> None:
+    """Write an asset manifest."""
+    assets = sorted(path.name for path in OUT.iterdir() if path.is_file())
+    payload = {
+        "asset_count": len(assets),
+        "asset_directory": str(OUT.relative_to(ROOT)),
+        "assets": assets,
+    }
+    path = OUT / "asset_manifest.json"
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    readme = [
+        "# Report assets",
+        "",
+        "Generated by `python scripts/generate_report_assets.py`.",
+        "",
+        "Includes final project tables, figures, comparisons, and statistics.",
+        "",
+    ]
+    (OUT / "README.md").write_text("\n".join(readme), encoding="utf-8")
 
 
 def main() -> None:
+    """Generate all assets."""
     OUT.mkdir(parents=True, exist_ok=True)
+    RESULTS.mkdir(parents=True, exist_ok=True)
 
-    benchmark_rows = load_benchmark_catalog()
-    summary_rows = load_eval_summary()
+    for path in OUT.glob("*"):
+        if path.is_file():
+            path.unlink()
 
-    compliance_rows = [
-        {
-            "Proposal item": "Tool-using debugging agent",
-            "Status": "Met",
-            "Evidence": "Restricted repository tools, patching, pytest verification",
-        },
-        {
-            "Proposal item": "Plan-Act-Observe-Reflect-Verify loop",
-            "Status": "Met",
-            "Evidence": "Trace records test, search, read, patch, verify, finish steps",
-        },
-        {
-            "Proposal item": "Isolated workspace and safety boundaries",
-            "Status": "Met",
-            "Evidence": (
-                "Disposable workspaces, allowed paths, forbidden tests, rollback"
-            ),
-        },
-        {
-            "Proposal item": "Open local model backend",
-            "Status": "Met",
-            "Evidence": "Ollama with Qwen2.5-Coder 1.5B",
-        },
-        {
-            "Proposal item": "12-18 repair tasks",
-            "Status": "Met",
-            "Evidence": "PatchPilot-Bench v0 contains 12 tasks",
-        },
-        {
-            "Proposal item": "Baseline/ablation comparison",
-            "Status": "Met",
-            "Evidence": (
-                "One-shot baseline and no-retry ablation compared to full agent"
-            ),
-        },
-        {
-            "Proposal item": "Metrics and statistical analysis",
-            "Status": "Met",
-            "Evidence": (
-                "Repair rate, pass rate, invalid patches, budgets, McNemar test"
-            ),
-        },
-        {
-            "Proposal item": "Demo/repo/report deliverables",
-            "Status": "Met",
-            "Evidence": "GitHub repo, Dockerized Streamlit demo, Hugging Face Space",
-        },
-    ]
+    summary = pd.read_csv(RESULTS / "evaluation_summary.csv")
+    paired = pd.read_csv(RESULTS / "mutmut_paired_outcomes.csv")
 
-    stats_rows = [
-        {"Metric": "Full agent successes", "Value": "12/12"},
-        {"Metric": "One-shot baseline successes", "Value": "8/12"},
-        {"Metric": "Both succeeded", "Value": "8"},
-        {"Metric": "Full agent only succeeded", "Value": "4"},
-        {"Metric": "One-shot only succeeded", "Value": "0"},
-        {"Metric": "Both failed", "Value": "0"},
-        {"Metric": "Exact McNemar p-value", "Value": "0.1250"},
-    ]
+    build_tables(summary.fillna(""), paired)
+    plot_repair_rates(summary)
+    plot_mutmut_ablation(summary)
+    plot_invalid_patch(summary)
+    plot_status_breakdown(paired)
+    plot_task_matrix(paired)
+    plot_workflow()
+    write_manifest()
 
-    write_csv(OUT / "table_benchmark_catalog.csv", benchmark_rows)
-    write_csv(OUT / "table_evaluation_summary.csv", summary_rows)
-    write_csv(OUT / "table_proposal_compliance.csv", compliance_rows)
-    write_csv(OUT / "table_statistical_analysis.csv", stats_rows)
-
-    save_table_png(
-        OUT / "table_benchmark_catalog.png",
-        benchmark_rows,
-        "PatchPilot-Bench v0 Catalog",
-    )
-    save_table_png(
-        OUT / "table_evaluation_summary.png", summary_rows, "Evaluation Summary"
-    )
-    save_table_png(
-        OUT / "table_proposal_compliance.png",
-        compliance_rows,
-        "Proposal Compliance Audit",
-    )
-    save_table_png(
-        OUT / "table_statistical_analysis.png",
-        stats_rows,
-        "Statistical Analysis Summary",
-    )
-
-    plot_repair_rates(summary_rows)
-    plot_failure_modes(summary_rows)
-    plot_patch_attempts()
-    plot_paired_success()
-    draw_architecture()
-    draw_workflow()
-
-    (OUT / "README.md").write_text(
-        "# PatchPilot Report Assets\n\n"
-        "Generated from local benchmark manifests and evaluation CSV files.\n",
-        encoding="utf-8",
-    )
-
-    print(f"Generated report assets in {OUT}")
+    print(f"ASSETS={OUT}")
+    print(f"RESULTS={RESULTS}")
+    for path in sorted(OUT.iterdir()):
+        if path.is_file():
+            print(path.relative_to(ROOT))
 
 
 if __name__ == "__main__":

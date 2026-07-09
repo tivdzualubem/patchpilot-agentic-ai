@@ -1,0 +1,30 @@
+{
+  "asset_count": 24,
+  "asset_directory": "docs/report_assets",
+  "assets": [
+    "fig_agent_workflow_loop.png",
+    "fig_agent_workflow_loop.svg",
+    "fig_invalid_patch_rate.png",
+    "fig_invalid_patch_rate.svg",
+    "fig_mutmut_ablation_repair_rate.png",
+    "fig_mutmut_ablation_repair_rate.svg",
+    "fig_mutmut_status_breakdown.png",
+    "fig_mutmut_status_breakdown.svg",
+    "fig_mutmut_task_success_matrix.png",
+    "fig_mutmut_task_success_matrix.svg",
+    "fig_repair_rate_comparison.png",
+    "fig_repair_rate_comparison.svg",
+    "table_benchmark_suite_summary.csv",
+    "table_benchmark_suite_summary.md",
+    "table_final_evaluation_summary.csv",
+    "table_final_evaluation_summary.md",
+    "table_mutmut_status_breakdown.csv",
+    "table_mutmut_status_breakdown.md",
+    "table_mutmut_task_outcomes_summary.csv",
+    "table_mutmut_task_outcomes_summary.md",
+    "table_project_deliverables.csv",
+    "table_project_deliverables.md",
+    "table_statistical_tests.csv",
+    "table_statistical_tests.md"
+  ]
+}

@@ -1,9 +1,0 @@
-Proposal item,Status,Evidence
-Tool-using debugging agent,Met,"Restricted repository tools, patching, pytest verification"
-Plan-Act-Observe-Reflect-Verify loop,Met,"Trace records test, search, read, patch, verify, finish steps"
-Isolated workspace and safety boundaries,Met,"Disposable workspaces, allowed paths, forbidden tests, rollback"
-Open local model backend,Met,Ollama with Qwen2.5-Coder 1.5B
-12-18 repair tasks,Met,PatchPilot-Bench v0 contains 12 tasks
-Baseline/ablation comparison,Met,One-shot baseline and no-retry ablation compared to full agent
-Metrics and statistical analysis,Met,"Repair rate, pass rate, invalid patches, budgets, McNemar test"
-Demo/repo/report deliverables,Met,"GitHub repo, Dockerized Streamlit demo, Hugging Face Space"

@@ -1,0 +1,9 @@
+condition,status,count
+Full agent,budget_exhausted,5
+Full agent,escalated,7
+Full agent,succeeded,8
+One-shot,escalated,14
+One-shot,succeeded,6
+No-retry,budget_exhausted,12
+No-retry,escalated,3
+No-retry,succeeded,5

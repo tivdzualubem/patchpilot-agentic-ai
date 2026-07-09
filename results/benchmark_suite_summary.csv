@@ -1,0 +1,5 @@
+benchmark,role,tasks,main_result
+Controlled,End-to-end sanity benchmark,12,12/12 for all variants
+Mutmut-generated,Primary ablation benchmark,20,Full 8/20; one-shot 6/20; no-retry 5/20
+QuixBugs smoke,External generalization check,8,3/8 repaired
+SWE-bench Lite,Official harness feasibility check,1,Blocked by local WSL/Docker I/O instability
