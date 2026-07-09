@@ -376,17 +376,13 @@ def main() -> None:
         if path.is_file():
             print(path.relative_to(ROOT))
 
-
-
 def normalize_text_outputs() -> None:
     """Normalize generated text assets so repository whitespace checks pass."""
     for pattern in ("*.csv", "*.json", "*.svg"):
         for file_path in OUT.glob(pattern):
             text = file_path.read_text(encoding="utf-8")
             lines = [line.rstrip() for line in text.splitlines()]
-            file_path.write_text("
-".join(lines) + "
-", encoding="utf-8")
+            file_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
