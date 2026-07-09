@@ -1,0 +1,9 @@
+benchmark,condition,runs,successes,repair_rate,full_suite_pass_rate,invalid_patch_rate,budget_exhaustions,escalations,notes
+controlled,full-live-qwen,12,12,1.00,1.00,0.00,,,Internal controlled benchmark; saturated.
+controlled,one-shot-live-qwen,12,12,1.00,1.00,0.00,,,Internal controlled benchmark; saturated.
+controlled,no-retry-live-qwen,12,12,1.00,1.00,0.00,,,Internal controlled benchmark; saturated.
+mutmut,full-live-qwen,20,8,0.40,0.40,0.00,5,7,Primary real mutmut-generated benchmark.
+mutmut,one-shot-live-qwen,20,6,0.30,0.30,0.00,0,14,Ablation baseline.
+mutmut,no-retry-live-qwen,20,5,0.25,0.25,0.00,12,3,Ablation baseline.
+quixbugs,full-live-qwen,8,3,0.375,0.375,0.00,3,2,External smoke benchmark.
+swebench-lite,official-harness-smoke,1,0,0.00,0.00,,,"Feasibility attempt only; local WSL/Docker I/O failure prevented full run."
