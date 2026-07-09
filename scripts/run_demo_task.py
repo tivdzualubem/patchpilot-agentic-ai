@@ -19,6 +19,10 @@ def parse_args() -> argparse.Namespace:
         description="Run one PatchPilot demo repair task."
     )
     parser.add_argument("--task-id", required=True)
+    parser.add_argument(
+        "--manifest-path",
+        help="Optional path to task.json. Defaults to benchmarks/<task-id>/task.json.",
+    )
     parser.add_argument("--model", default="qwen2.5-coder:1.5b")
     parser.add_argument(
         "--output-root",
@@ -31,7 +35,13 @@ def main() -> None:
     """Run one selected benchmark through the live PatchPilot agent."""
     args = parse_args()
     project_root = Path(".").resolve(strict=True)
-    manifest_path = project_root / "benchmarks" / args.task_id / "task.json"
+    if args.manifest_path:
+        manifest_path = Path(args.manifest_path)
+        if not manifest_path.is_absolute():
+            manifest_path = project_root / manifest_path
+    else:
+        manifest_path = project_root / "benchmarks" / args.task_id / "task.json"
+
     manifest = load_manifest(manifest_path)
 
     timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")

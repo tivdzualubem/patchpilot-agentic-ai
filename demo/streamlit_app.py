@@ -12,16 +12,28 @@ import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BENCHMARKS = PROJECT_ROOT / "benchmarks"
+MUTMUT_BENCHMARKS = PROJECT_ROOT / "generated_benchmarks" / "mutmut_algorithms"
 
 
 def manifests() -> list[dict[str, Any]]:
-    """Load benchmark manifests."""
+    """Load demo-capable benchmark manifests."""
     tasks: list[dict[str, Any]] = []
-    for path in sorted(BENCHMARKS.glob("*/task.json")):
-        data = json.loads(path.read_text(encoding="utf-8"))
-        data["manifest_path"] = str(path)
-        data["task_dir"] = path.parent.name
-        tasks.append(data)
+
+    sources = [
+        ("Controlled benchmark", BENCHMARKS),
+        ("Mutmut-generated benchmark", MUTMUT_BENCHMARKS),
+    ]
+
+    for family, root in sources:
+        if not root.is_dir():
+            continue
+        for path in sorted(root.glob("*/task.json")):
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["benchmark_family"] = family
+            data["manifest_path"] = str(path.relative_to(PROJECT_ROOT))
+            data["task_dir"] = path.parent.name
+            tasks.append(data)
+
     return tasks
 
 
@@ -36,14 +48,15 @@ def task_by_id(task_id: str) -> dict[str, Any]:
 def source_files(task: dict[str, Any]) -> list[Path]:
     """Return source files for a benchmark task."""
     repo = PROJECT_ROOT / str(task["repository_root"])
-    files = sorted((repo / "src").glob("*.py"))
+    src_root = repo / "src"
+    files = sorted(src_root.rglob("*.py"))
     return [path for path in files if path.name != "__init__.py"]
 
 
 def test_files(task: dict[str, Any]) -> list[Path]:
     """Return test files for a benchmark task."""
     repo = PROJECT_ROOT / str(task["repository_root"])
-    return sorted((repo / "tests").glob("test_*.py"))
+    return sorted((repo / "tests").rglob("test_*.py"))
 
 
 def file_text(path: Path) -> str:
@@ -124,14 +137,16 @@ def render_diff(
             st.code("".join(diff), language="diff")
 
 
-def run_live_repair(task_id: str, model: str) -> dict[str, Any]:
+def run_live_repair(task: dict[str, Any], model: str) -> dict[str, Any]:
     """Run PatchPilot against one selected benchmark task."""
     result = subprocess.run(
         [
             "python",
             "scripts/run_demo_task.py",
             "--task-id",
-            task_id,
+            str(task["task_id"]),
+            "--manifest-path",
+            str(task["manifest_path"]),
             "--model",
             model,
         ],
@@ -165,18 +180,25 @@ def run_live_repair(task_id: str, model: str) -> dict[str, Any]:
 def render_task_selector() -> dict[str, Any]:
     """Render benchmark task selector."""
     all_tasks = manifests()
-    task_ids = [task["task_id"] for task in all_tasks]
+    if not all_tasks:
+        st.error("No benchmark manifests found.")
+        st.stop()
 
-    selected_id = st.selectbox(
+    labels = {
+        f"{task['benchmark_family']} · {task['task_id']}": task
+        for task in all_tasks
+    }
+
+    selected_label = st.selectbox(
         "Choose a benchmark repair task",
-        task_ids,
+        list(labels),
         index=0,
     )
-    task = task_by_id(selected_id)
+    task = labels[selected_label]
 
     st.write(task["goal"])
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Difficulty", str(task["difficulty"]))
+    c1.metric("Benchmark", str(task["benchmark_family"]))
     c2.metric("Category", str(task["defect_category"]))
     c3.metric("Initial failures", str(task["expected_initial_failures"]))
     c4.metric("Editable paths", ", ".join(task["allowed_paths"]))
@@ -186,6 +208,8 @@ def render_task_selector() -> dict[str, Any]:
             {
                 "task_id": task["task_id"],
                 "title": task["title"],
+                "benchmark_family": task["benchmark_family"],
+                "manifest_path": task["manifest_path"],
                 "defect_category": task["defect_category"],
                 "allowed_paths": task["allowed_paths"],
                 "forbidden_paths": task["forbidden_paths"],
@@ -239,7 +263,7 @@ def render_interactive_demo() -> None:
 
     if st.button("Run PatchPilot on this task", type="primary"):
         with st.spinner("PatchPilot is repairing the selected benchmark..."):
-            result = run_live_repair(str(task["task_id"]), model)
+            result = run_live_repair(task, model)
 
         if not result.get("ok"):
             st.error("Live run failed. Check Ollama and the terminal output.")
