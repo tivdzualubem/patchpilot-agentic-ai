@@ -1,5 +1,0 @@
-| comparison | first_only_successes | second_only_successes | discordant_pairs | exact_p_value |
-| --- | --- | --- | --- | --- |
-| full vs one shot | 2 | 0 | 2 | 0.5000 |
-| full vs no retry | 3 | 0 | 3 | 0.2500 |
-| one shot vs no retry | 1 | 0 | 1 | 1.0000 |
