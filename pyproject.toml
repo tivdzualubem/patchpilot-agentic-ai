@@ -19,6 +19,7 @@ dev = [
     "pytest-cov>=5,<7",
     "ruff>=0.5,<1",
     "mypy>=1.10,<2",
+    "mutmut>=3,<4",
 ]
 
 [project.scripts]

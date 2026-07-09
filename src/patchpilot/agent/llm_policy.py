@@ -86,18 +86,29 @@ class StructuredLLMPolicy:
         )
 
     @staticmethod
-    def _failure_query(state: AgentState) -> str:
+    def _target_function_from_failure(state: AgentState) -> str | None:
+        """Infer the source function most directly implicated by test failure."""
         output = StructuredLLMPolicy._latest_failed_test_output(state)
         patterns = (
             r"where .*?=\s*([A-Za-z_]\w*)\(",
+            r">\s*assert\s+([A-Za-z_]\w*)\(",
+            r"\n\s{4}def\s+([A-Za-z_]\w*)\(",
             r"assert\s+([A-Za-z_]\w*)\(",
-            r"\b([A-Za-z_]\w*)\s+function\b",
         )
 
         for pattern in patterns:
-            match = re.search(pattern, output)
-            if match:
-                return match.group(1)
+            for match in re.finditer(pattern, output):
+                name = match.group(1)
+                if not name.startswith("test_"):
+                    return name
+
+        return None
+
+    @staticmethod
+    def _failure_query(state: AgentState) -> str:
+        target = StructuredLLMPolicy._target_function_from_failure(state)
+        if target:
+            return target
 
         goal_match = re.search(r"\b([A-Za-z_]\w*)\s+function\b", state.task.goal)
         if goal_match:
@@ -232,23 +243,81 @@ class StructuredLLMPolicy:
             read_output,
         )
 
+    @staticmethod
+    def _focused_source_context(state: AgentState, read_output: str) -> str:
+        """Return the failing function block when it can be inferred."""
+        target = StructuredLLMPolicy._target_function_from_failure(state)
+        if not target:
+            return read_output
+
+        lines = StructuredLLMPolicy._source_lines(read_output)
+        start_index: int | None = None
+        for index, (_, line) in enumerate(lines):
+            if re.match(rf"^(async\s+def|def)\s+{re.escape(target)}\(", line):
+                start_index = index
+                break
+
+        if start_index is None:
+            return read_output
+
+        end_index = len(lines)
+        for index in range(start_index + 1, len(lines)):
+            _, line = lines[index]
+            if re.match(r"^(async\s+def|def)\s+[A-Za-z_]\w*\(", line):
+                end_index = index
+                break
+
+        context_start = max(0, start_index - 2)
+        selected = lines[context_start:end_index]
+        return "\n".join(f"{number}: {line}" for number, line in selected)
+
     def _generate_patch_decision(self, state: AgentState) -> AgentDecision:
         path, content = self._last_read_file(state)
         test_output = self._latest_failed_test_output(state)
+        focused_content = self._focused_source_context(state, content)
+        target = self._target_function_from_failure(state) or "the failing function"
+
+        system_prompt = (
+            "You are PatchPilot. Return only one corrected Python source line."
+        )
+        user_prompt = (
+            "Fix the Python source file using the failing tests.\n"
+            f"FILE: {path}\n"
+            f"TARGET FUNCTION: {target}\n"
+            f"RELEVANT SOURCE CONTEXT:\n{focused_content}\n\n"
+            f"FAILING TEST OUTPUT:\n{test_output[:2000]}\n\n"
+            "Return exactly one corrected replacement line from the source file. "
+            "Do not return an assert line. Do not return test code. "
+            "No diff markers, no markdown, no explanation."
+        )
 
         raw_diff = self.model.generate(
-            "You are PatchPilot. Return only one corrected Python source line.",
-            (
-                "Fix the Python source file using the failing tests.\n"
-                f"FILE: {path}\n"
-                f"CONTENT:\n{content}\n\n"
-                f"FAILING TEST OUTPUT:\n{test_output[:2000]}\n\n"
-                "Return exactly one corrected replacement line from the source file. "
-                "No diff markers, no markdown, no explanation."
-            ),
+            system_prompt,
+            user_prompt,
             response_schema=None,
         )
-        patch_text = self._extract_diff(raw_diff, path, content)
+        try:
+            patch_text = self._extract_diff(raw_diff, path, content)
+        except PolicyResponseError as first_error:
+            retry_prompt = (
+                user_prompt
+                + "\n\nYour previous answer was not a valid source replacement "
+                "line. Return only the corrected line that belongs in the source "
+                f"function {target}. Previous invalid answer:\n"
+                f"{raw_diff[:500]}"
+            )
+            retry_diff = self.model.generate(
+                system_prompt,
+                retry_prompt,
+                response_schema=None,
+            )
+            try:
+                patch_text = self._extract_diff(retry_diff, path, content)
+            except PolicyResponseError as retry_error:
+                raise PolicyResponseError(
+                    f"{retry_error} First invalid response: {raw_diff[:300]}",
+                    raw_response=retry_diff,
+                ) from first_error
 
         return self._make_decision(
             summary="Generate and apply a model-proposed source patch.",

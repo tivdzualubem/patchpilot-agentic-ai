@@ -1,0 +1,8 @@
+{
+  "source_dataset": "mutmut_algorithms",
+  "output_root": "generated_benchmarks/mutmut_algorithms",
+  "mutants_total": 195,
+  "killed_mutants": 146,
+  "generated_tasks": 20,
+  "max_tasks": 20
+}

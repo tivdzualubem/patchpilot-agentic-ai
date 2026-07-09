@@ -1,0 +1,5 @@
+{
+  "mutant_name": "mutmut_algorithms.core.x_gcd__mutmut_1",
+  "mutant_status": "killed",
+  "expected_initial_failures": 1
+}

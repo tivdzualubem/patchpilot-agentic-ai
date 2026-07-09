@@ -211,6 +211,36 @@ def slugify(value: str) -> str:
     return slug or "mutant"
 
 
+
+def mutant_group_key(mutant_name: str) -> str:
+    """Return a stable function-level grouping key for a mutmut mutant."""
+    match = re.search(r"\.x_(?P<function>.+?)__mutmut_\d+$", mutant_name)
+    if match is not None:
+        return match.group("function")
+    return mutant_name.rsplit("__mutmut_", 1)[0]
+
+
+def select_diverse_mutants(
+    mutants: Sequence[MutantResult],
+    max_tasks: int,
+) -> list[MutantResult]:
+    """Select mutants round-robin across mutated functions."""
+    groups: dict[str, list[MutantResult]] = {}
+    for mutant in mutants:
+        groups.setdefault(mutant_group_key(mutant.name), []).append(mutant)
+
+    selected: list[MutantResult] = []
+    while len(selected) < max_tasks and groups:
+        for key in sorted(list(groups)):
+            bucket = groups[key]
+            if not bucket:
+                del groups[key]
+                continue
+            selected.append(bucket.pop(0))
+            if len(selected) >= max_tasks:
+                break
+    return selected
+
 def build_task_id(prefix: str, mutant_name: str) -> str:
     """Build a schema-compatible task id no longer than 100 chars."""
     slug = slugify(mutant_name)
@@ -335,6 +365,7 @@ def export_mutant_task(
         return None
 
     expected_failures = estimate_initial_failures(combined_test_output)
+    remove_runtime_artifacts(repository_path)
     manifest = {
         "task_id": task_id,
         "title": f"Mutmut-generated killed mutant: {mutant.name}",
@@ -380,7 +411,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--source-root", required=True)
     parser.add_argument("--source-path", action="append", required=True)
-    parser.add_argument("--test-path", action="append", default=["tests"])
+    parser.add_argument("--test-path", action="append", default=None)
     parser.add_argument("--test-command", default="python -m pytest -q")
     parser.add_argument("--pytest-pythonpath", action="append", default=[])
     parser.add_argument("--output-root", default="generated_benchmarks/mutmut")
@@ -409,6 +440,7 @@ def main() -> None:
     generation_root = work_base / timestamp
     work_root = generation_root / "work"
 
+    test_paths = args.test_path or ["tests"]
     test_command_args = shlex.split(args.test_command)
     if len(test_command_args) < 3:
         raise SystemExit("--test-command must contain at least 3 arguments")
@@ -418,7 +450,7 @@ def main() -> None:
     ensure_mutmut_config(
         work_root,
         source_paths=args.source_path,
-        test_paths=args.test_path,
+        test_paths=test_paths,
         test_command=args.test_command,
         pytest_pythonpath=args.pytest_pythonpath,
     )
@@ -449,13 +481,13 @@ def main() -> None:
     )
     mutants = parse_mutmut_results(results.stdout)
     killed = [mutant for mutant in mutants if mutant.status == "killed"]
-    selected = killed[: args.max_tasks]
+    selected = select_diverse_mutants(killed, args.max_tasks)
 
     if not selected:
         raise SystemExit("No killed mutants found.")
 
     forbidden_paths = sorted(
-        {*args.test_path, ".mutmut-cache", "mutants", "__pycache__"}
+        {*test_paths, ".mutmut-cache", "mutants", "__pycache__"}
     )
     generated: list[GeneratedTask] = []
     for mutant in selected:
@@ -482,8 +514,14 @@ def main() -> None:
             "task_id": task.task_id,
             "mutant_name": task.mutant_name,
             "mutant_status": task.mutant_status,
-            "manifest_path": str(task.manifest_path),
-            "repository_path": str(task.repository_path),
+            "manifest_path": repository_root_for_manifest(
+                task.manifest_path,
+                project_root,
+            ),
+            "repository_path": repository_root_for_manifest(
+                task.repository_path,
+                project_root,
+            ),
             "expected_initial_failures": task.expected_initial_failures,
         }
         for task in generated
@@ -492,9 +530,8 @@ def main() -> None:
     write_json(
         output_root / "generation_summary.json",
         {
-            "source_root": str(source_root),
-            "work_root": str(work_root),
-            "output_root": str(output_root),
+            "source_dataset": source_root.name,
+            "output_root": repository_root_for_manifest(output_root, project_root),
             "mutants_total": len(mutants),
             "killed_mutants": len(killed),
             "generated_tasks": len(generated),

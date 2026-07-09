@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -132,6 +133,19 @@ class OneShotRepairPolicy(StructuredLLMPolicy):
         )
 
 
+
+def build_run_id(condition: str, task_id: str, timestamp: str) -> str:
+    """Build a trace-safe run id with a stable hash when it is too long."""
+    raw = f"{condition}-{task_id}-{timestamp}"
+    if len(raw) <= 100:
+        return raw
+
+    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:10]
+    suffix = f"-{digest}-{timestamp}"
+    prefix = f"{condition}-{task_id}"
+    keep = 100 - len(suffix)
+    return f"{prefix[:keep].rstrip('-')}{suffix}"
+
 def budget_for_condition(condition: str) -> ExecutionBudget:
     """Return the execution budget for one evaluation condition."""
     if condition in {"no-retry-live-qwen", "one-shot-live-qwen"}:
@@ -235,7 +249,7 @@ def main() -> None:
     run_rows = []
     for manifest_path in manifests:
         manifest = load_manifest(manifest_path)
-        run_id = f"{args.condition}-{manifest.task_id}-{timestamp}"
+        run_id = build_run_id(args.condition, manifest.task_id, timestamp)
         print(f"RUN {manifest.task_id} -> {run_id}", flush=True)
         run = runner.run(
             manifest_path=manifest_path,
