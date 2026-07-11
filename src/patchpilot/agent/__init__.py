@@ -7,6 +7,7 @@ from patchpilot.agent.llm_policy import (
     StructuredLLMPolicy,
     TextGenerationModel,
 )
+from patchpilot.agent.llm_tool_policy import LLMToolPolicy
 from patchpilot.agent.policy import AgentDecision, AgentPolicy
 from patchpilot.agent.tracing import RunTrace, TraceRecorder
 
@@ -15,6 +16,7 @@ __all__ = [
     "AgentDecision",
     "AgentPolicy",
     "AgentToolExecutor",
+    "LLMToolPolicy",
     "PolicyResponseError",
     "RunTrace",
     "StructuredLLMPolicy",
