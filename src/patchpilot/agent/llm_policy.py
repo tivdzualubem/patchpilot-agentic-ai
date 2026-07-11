@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import difflib
 import re
-from typing import Protocol
+from time import perf_counter
+from typing import Any, Protocol
 
 from patchpilot.agent.policy import AgentDecision
 from patchpilot.schemas import AgentState, ObservationStatus, ToolAction, ToolName
+from patchpilot.schemas.models import ModelCallRecord
 
 
 class PolicyResponseError(RuntimeError):
@@ -32,6 +34,113 @@ class TextGenerationModel(Protocol):
         response_schema: dict[str, object] | None = None,
     ) -> str:
         """Generate one model response."""
+
+
+def _model_trace_metadata(
+    model: TextGenerationModel,
+) -> tuple[str, str | None, dict[str, Any]]:
+    """Return stable model identity and generation configuration."""
+    backend = f"{type(model).__module__}.{type(model).__qualname__}"
+    model_name: str | None = None
+    config: dict[str, Any] = {}
+
+    provider = getattr(model, "trace_metadata", None)
+    if not callable(provider):
+        return backend, model_name, config
+
+    metadata = provider()
+    if not isinstance(metadata, dict):
+        raise TypeError("trace_metadata() must return a dictionary.")
+
+    copied = dict(metadata)
+    raw_backend = copied.pop("backend", backend)
+    raw_model_name = copied.pop("model", None)
+    backend = str(raw_backend)
+
+    if raw_model_name is not None:
+        model_name = str(raw_model_name)
+
+    return backend, model_name, copied
+
+
+def _generate_with_trace(
+    *,
+    state: AgentState,
+    model: TextGenerationModel,
+    policy_name: str,
+    purpose: str,
+    attempt: int,
+    system_prompt: str,
+    user_prompt: str,
+    response_schema: dict[str, object] | None,
+) -> tuple[str, int]:
+    """Generate once and preserve prompts, response, identity, and errors."""
+    backend, model_name, model_config = _model_trace_metadata(model)
+    state.model_calls += 1
+    call_index = state.model_calls
+    started_at = perf_counter()
+
+    try:
+        raw_response = model.generate(
+            system_prompt,
+            user_prompt,
+            response_schema=response_schema,
+        )
+    except Exception as exc:
+        state.model_call_records.append(
+            ModelCallRecord(
+                call_index=call_index,
+                policy=policy_name,
+                purpose=purpose,
+                attempt=attempt,
+                backend=backend,
+                model_name=model_name,
+                generation_config=model_config,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_schema=response_schema,
+                generation_succeeded=False,
+                duration_seconds=perf_counter() - started_at,
+                error_type=type(exc).__name__,
+                error_message=str(exc)[:2000],
+            )
+        )
+        raise
+
+    state.model_call_records.append(
+        ModelCallRecord(
+            call_index=call_index,
+            policy=policy_name,
+            purpose=purpose,
+            attempt=attempt,
+            backend=backend,
+            model_name=model_name,
+            generation_config=model_config,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response_schema=response_schema,
+            raw_response=raw_response,
+            generation_succeeded=True,
+            duration_seconds=perf_counter() - started_at,
+        )
+    )
+    return raw_response, len(state.model_call_records) - 1
+
+
+def _mark_model_call_parse(
+    state: AgentState,
+    record_index: int,
+    *,
+    succeeded: bool,
+    error: Exception | None = None,
+) -> None:
+    """Attach parse or policy-validation outcome to one model call."""
+    record = state.model_call_records[record_index]
+    record.parse_succeeded = succeeded
+
+    if error is not None:
+        record.error_type = type(error).__name__
+        record.error_message = str(error)[:2000]
 
 
 class StructuredLLMPolicy:
@@ -278,15 +387,30 @@ class StructuredLLMPolicy:
             "No diff markers, no markdown, no explanation."
         )
 
-        state.model_calls += 1
-        raw_diff = self.model.generate(
-            system_prompt,
-            user_prompt,
+        raw_diff, first_record = _generate_with_trace(
+            state=state,
+            model=self.model,
+            policy_name=type(self).__name__,
+            purpose="patch_generation",
+            attempt=1,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
             response_schema=None,
         )
         try:
             patch_text = self._extract_diff(raw_diff, path, content)
+            _mark_model_call_parse(
+                state,
+                first_record,
+                succeeded=True,
+            )
         except PolicyResponseError as first_error:
+            _mark_model_call_parse(
+                state,
+                first_record,
+                succeeded=False,
+                error=first_error,
+            )
             state.decision_parse_failures += 1
             retry_prompt = (
                 user_prompt
@@ -295,15 +419,30 @@ class StructuredLLMPolicy:
                 f"function {target}. Previous invalid answer:\n"
                 f"{raw_diff[:500]}"
             )
-            state.model_calls += 1
-            retry_diff = self.model.generate(
-                system_prompt,
-                retry_prompt,
+            retry_diff, retry_record = _generate_with_trace(
+                state=state,
+                model=self.model,
+                policy_name=type(self).__name__,
+                purpose="patch_generation",
+                attempt=2,
+                system_prompt=system_prompt,
+                user_prompt=retry_prompt,
                 response_schema=None,
             )
             try:
                 patch_text = self._extract_diff(retry_diff, path, content)
+                _mark_model_call_parse(
+                    state,
+                    retry_record,
+                    succeeded=True,
+                )
             except PolicyResponseError as retry_error:
+                _mark_model_call_parse(
+                    state,
+                    retry_record,
+                    succeeded=False,
+                    error=retry_error,
+                )
                 state.decision_parse_failures += 1
                 raise PolicyResponseError(
                     f"{retry_error} First invalid response: {raw_diff[:300]}",

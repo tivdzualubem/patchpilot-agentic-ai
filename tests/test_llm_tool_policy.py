@@ -336,3 +336,45 @@ def test_exhausted_parse_retries_are_all_counted() -> None:
 
     assert state.model_calls == 2
     assert state.decision_parse_failures == 2
+
+
+def test_tool_policy_model_call_trace_contains_schema_and_response() -> None:
+    state = failed_state()
+    raw = decision_json(
+        tool="read_file",
+        arguments={"relative_path": "src/calculator.py"},
+    )
+
+    decision = LLMToolPolicy(ScriptedModel([raw])).decide(state)
+
+    assert decision.action.tool is ToolName.READ_FILE
+    assert len(state.model_call_records) == 1
+    record = state.model_call_records[0]
+    assert record.policy == "LLMToolPolicy"
+    assert record.purpose == "tool_decision"
+    assert record.attempt == 1
+    assert record.response_schema is not None
+    assert "properties" in record.response_schema
+    assert record.raw_response == raw
+    assert record.generation_succeeded is True
+    assert record.parse_succeeded is True
+    assert "CURRENT REPAIR STATE" in record.user_prompt
+
+
+def test_tool_policy_retry_trace_marks_invalid_then_valid() -> None:
+    state = failed_state()
+    valid = decision_json(
+        tool="read_file",
+        arguments={"relative_path": "src/calculator.py"},
+    )
+
+    LLMToolPolicy(ScriptedModel(["not valid json", valid])).decide(state)
+
+    assert len(state.model_call_records) == 2
+    first, second = state.model_call_records
+    assert first.attempt == 1
+    assert first.parse_succeeded is False
+    assert first.error_type == "PolicyResponseError"
+    assert second.attempt == 2
+    assert second.parse_succeeded is True
+    assert "CORRECTION REQUIRED" in second.user_prompt

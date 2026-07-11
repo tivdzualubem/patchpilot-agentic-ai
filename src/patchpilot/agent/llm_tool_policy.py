@@ -7,7 +7,12 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from patchpilot.agent.llm_policy import PolicyResponseError, TextGenerationModel
+from patchpilot.agent.llm_policy import (
+    PolicyResponseError,
+    TextGenerationModel,
+    _generate_with_trace,
+    _mark_model_call_parse,
+)
 from patchpilot.agent.policy import AgentDecision
 from patchpilot.schemas import AgentState
 
@@ -316,21 +321,37 @@ class LLMToolPolicy:
         user_prompt = base_prompt
 
         for attempt in range(1, self.max_parse_attempts + 1):
-            state.model_calls += 1
-            raw_response = self.model.generate(
-                system_prompt,
-                user_prompt,
+            raw_response, record_index = _generate_with_trace(
+                state=state,
+                model=self.model,
+                policy_name=type(self).__name__,
+                purpose="tool_decision",
+                attempt=attempt,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
                 response_schema=response_schema,
             )
 
             try:
                 decision = self._parse_decision(raw_response)
-                return self._validate_decision(
+                validated = self._validate_decision(
                     state,
                     decision,
                     raw_response,
                 )
+                _mark_model_call_parse(
+                    state,
+                    record_index,
+                    succeeded=True,
+                )
+                return validated
             except PolicyResponseError as exc:
+                _mark_model_call_parse(
+                    state,
+                    record_index,
+                    succeeded=False,
+                    error=exc,
+                )
                 state.decision_parse_failures += 1
                 if attempt >= self.max_parse_attempts:
                     raise PolicyResponseError(

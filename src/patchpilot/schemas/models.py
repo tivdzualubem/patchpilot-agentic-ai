@@ -179,6 +179,45 @@ class ToolObservation(BaseModel):
     duration_seconds: float = Field(default=0.0, ge=0)
 
 
+class ModelCallRecord(BaseModel):
+    """One complete model invocation record for reproducible traces."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    call_index: int = Field(ge=1)
+    policy: str = Field(min_length=1, max_length=200)
+    purpose: str = Field(min_length=1, max_length=100)
+    attempt: int = Field(ge=1)
+    backend: str = Field(min_length=1, max_length=300)
+    model_name: str | None = Field(default=None, max_length=300)
+    generation_config: dict[str, Any] = Field(default_factory=dict)
+    system_prompt: str
+    user_prompt: str
+    response_schema: dict[str, Any] | None = None
+    raw_response: str | None = None
+    generation_succeeded: bool
+    parse_succeeded: bool | None = None
+    duration_seconds: float = Field(default=0.0, ge=0)
+    error_type: str | None = Field(default=None, max_length=300)
+    error_message: str | None = Field(default=None, max_length=2000)
+
+
+class DecisionRecord(BaseModel):
+    """One policy decision linked to the model calls that produced it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    decision_index: int = Field(ge=1)
+    policy: str = Field(min_length=1, max_length=300)
+    model_call_start: int | None = Field(default=None, ge=1)
+    model_call_end: int | None = Field(default=None, ge=1)
+    reasoning_summary: str = Field(min_length=1, max_length=4000)
+    plan: list[str] = Field(default_factory=list)
+    hypothesis: str | None = None
+    reflection: str | None = None
+    action: ToolAction
+
+
 class ProgressSnapshot(BaseModel):
     """One durable no-progress detection checkpoint."""
 
@@ -222,6 +261,8 @@ class AgentState(BaseModel):
     no_progress_streak: int = Field(default=0, ge=0)
 
     model_calls: int = Field(default=0, ge=0)
+    model_call_records: list[ModelCallRecord] = Field(default_factory=list)
+    decision_records: list[DecisionRecord] = Field(default_factory=list)
     decision_parse_failures: int = Field(default=0, ge=0)
     patch_rejection_count: int = Field(default=0, ge=0)
     patch_application_failure_count: int = Field(default=0, ge=0)

@@ -452,3 +452,65 @@ def test_scaffolded_patch_parse_failures_are_counted() -> None:
 
     assert state.model_calls == 2
     assert state.decision_parse_failures == 2
+
+
+def test_scaffolded_model_call_trace_is_complete() -> None:
+    state = read_state()
+
+    StructuredLLMPolicy(FakeModel(valid_diff())).decide(state)
+
+    assert len(state.model_call_records) == 1
+    record = state.model_call_records[0]
+    assert record.call_index == 1
+    assert record.policy == "StructuredLLMPolicy"
+    assert record.purpose == "patch_generation"
+    assert record.attempt == 1
+    assert record.backend.endswith(".FakeModel")
+    assert record.system_prompt.startswith("You are PatchPilot")
+    assert "FILE: src/calculator.py" in record.user_prompt
+    assert record.response_schema is None
+    assert record.raw_response == valid_diff()
+    assert record.generation_succeeded is True
+    assert record.parse_succeeded is True
+    assert record.error_type is None
+
+
+def test_scaffolded_parse_retry_records_each_response() -> None:
+    state = read_state()
+
+    with pytest.raises(PolicyResponseError):
+        StructuredLLMPolicy(FakeModel("not a source replacement")).decide(state)
+
+    assert len(state.model_call_records) == 2
+    assert [record.attempt for record in state.model_call_records] == [1, 2]
+    assert all(record.generation_succeeded for record in state.model_call_records)
+    assert all(record.parse_succeeded is False for record in state.model_call_records)
+    assert all(
+        record.error_type == "PolicyResponseError"
+        for record in state.model_call_records
+    )
+
+
+def test_model_generation_error_is_preserved_in_call_trace() -> None:
+    class ErrorModel:
+        def generate(
+            self,
+            system_prompt: str,
+            user_prompt: str,
+            response_schema: dict[str, object] | None = None,
+        ) -> str:
+            del system_prompt, user_prompt, response_schema
+            raise RuntimeError("backend unavailable")
+
+    state = read_state()
+
+    with pytest.raises(RuntimeError, match="backend unavailable"):
+        StructuredLLMPolicy(ErrorModel()).decide(state)
+
+    assert state.model_calls == 1
+    assert len(state.model_call_records) == 1
+    record = state.model_call_records[0]
+    assert record.generation_succeeded is False
+    assert record.parse_succeeded is None
+    assert record.error_type == "RuntimeError"
+    assert record.error_message == "backend unavailable"

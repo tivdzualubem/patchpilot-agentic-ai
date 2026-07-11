@@ -250,3 +250,22 @@ def test_policy_parse_failure_has_normalized_category() -> None:
     assert result.status is AgentStatus.ESCALATED
     assert result.last_failure_category is FailureCategory.DECISION_PARSE_ERROR
     assert result.terminal_failure_category is FailureCategory.DECISION_PARSE_ERROR
+
+
+def test_control_loop_records_policy_decision_metadata() -> None:
+    state = make_state()
+    loop = AgentControlLoop(
+        policy=SuccessPolicy(),
+        executor=SuccessExecutor(),
+    )
+
+    result = loop.run(state)
+
+    assert len(result.decision_records) == 1
+    record = result.decision_records[0]
+    assert record.decision_index == 1
+    assert record.policy.endswith(".SuccessPolicy")
+    assert record.model_call_start is None
+    assert record.model_call_end is None
+    assert record.reasoning_summary == "The task is complete."
+    assert record.action.tool is ToolName.FINISH

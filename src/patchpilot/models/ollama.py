@@ -42,6 +42,18 @@ class OllamaChatModel:
         self.seed = seed
         self.max_tokens = max_tokens
 
+    def trace_metadata(self) -> dict[str, object]:
+        """Return stable backend identity and reproducible generation options."""
+        return {
+            "backend": "ollama",
+            "model": self.model,
+            "base_url": self.base_url,
+            "timeout_seconds": self.timeout_seconds,
+            "temperature": self.temperature,
+            "seed": self.seed,
+            "max_tokens": self.max_tokens,
+        }
+
     def generate(
         self,
         system_prompt: str,
