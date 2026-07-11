@@ -9,6 +9,7 @@ from patchpilot.agent.baseline_policies import (
     FixedWorkflowPolicy,
     OneShotRepairPolicy,
 )
+from patchpilot.agent.executor import VerificationMode
 from patchpilot.agent.llm_policy import TextGenerationModel
 from patchpilot.agent.llm_tool_policy import LLMToolPolicy
 from patchpilot.agent.policy import AgentPolicy
@@ -23,6 +24,9 @@ class EvaluationCondition(StrEnum):
     FIXED_WORKFLOW = "fixed-workflow"
     TOOL_AGENT_NO_REFLECTION = "tool-agent-no-reflection"
     FULL_REFLECTIVE_AGENT = "full-reflective-agent"
+    FULL_REFLECTIVE_AGENT_NO_RUNTIME_VERIFICATION = (
+        "full-reflective-agent-no-runtime-verification"
+    )
 
 
 @dataclass(frozen=True)
@@ -36,6 +40,7 @@ class ConditionSpec:
     reflection_enabled: bool
     retry_enabled: bool
     budget: ExecutionBudget
+    verification_mode: VerificationMode = VerificationMode.STRICT
 
     def trace_metadata(self) -> dict[str, str]:
         """Return stable condition metadata for every run trace."""
@@ -46,6 +51,7 @@ class ConditionSpec:
             "model_selects_tools": str(self.model_selects_tools).lower(),
             "reflection_enabled": str(self.reflection_enabled).lower(),
             "retry_enabled": str(self.retry_enabled).lower(),
+            "runtime_verification_mode": self.verification_mode.value,
             "budget_max_steps": str(self.budget.max_steps),
             "budget_max_tool_calls": str(self.budget.max_tool_calls),
             "budget_max_patch_attempts": str(self.budget.max_patch_attempts),
@@ -79,6 +85,16 @@ PRIMARY_CONDITIONS: tuple[EvaluationCondition, ...] = (
     EvaluationCondition.FIXED_WORKFLOW,
     EvaluationCondition.TOOL_AGENT_NO_REFLECTION,
     EvaluationCondition.FULL_REFLECTIVE_AGENT,
+)
+
+VERIFICATION_ABLATION_CONDITIONS: tuple[EvaluationCondition, ...] = (
+    EvaluationCondition.FULL_REFLECTIVE_AGENT,
+    EvaluationCondition.FULL_REFLECTIVE_AGENT_NO_RUNTIME_VERIFICATION,
+)
+
+ALL_CONDITIONS: tuple[EvaluationCondition, ...] = (
+    *PRIMARY_CONDITIONS,
+    EvaluationCondition.FULL_REFLECTIVE_AGENT_NO_RUNTIME_VERIFICATION,
 )
 
 CONDITION_SPECS: dict[EvaluationCondition, ConditionSpec] = {
@@ -129,12 +145,30 @@ CONDITION_SPECS: dict[EvaluationCondition, ConditionSpec] = {
         retry_enabled=True,
         budget=_ITERATIVE_BUDGET,
     ),
+    EvaluationCondition.FULL_REFLECTIVE_AGENT_NO_RUNTIME_VERIFICATION: ConditionSpec(
+        condition=(EvaluationCondition.FULL_REFLECTIVE_AGENT_NO_RUNTIME_VERIFICATION),
+        label="Full reflective agent without runtime verification",
+        description=(
+            "The same reflective policy, model, prompts, budget, and tools run "
+            "without runtime syntax or full-suite success enforcement."
+        ),
+        model_selects_tools=True,
+        reflection_enabled=True,
+        retry_enabled=True,
+        budget=_ITERATIVE_BUDGET,
+        verification_mode=VerificationMode.DISABLED,
+    ),
 }
 
 
 def condition_values() -> tuple[str, ...]:
     """Return primary condition names in deterministic experiment order."""
     return tuple(condition.value for condition in PRIMARY_CONDITIONS)
+
+
+def all_condition_values() -> tuple[str, ...]:
+    """Return every selectable primary or ablation condition."""
+    return tuple(condition.value for condition in ALL_CONDITIONS)
 
 
 def parse_condition(
@@ -147,7 +181,7 @@ def parse_condition(
     try:
         return EvaluationCondition(value)
     except ValueError as exc:
-        allowed = ", ".join(condition_values())
+        allowed = ", ".join(all_condition_values())
         raise ValueError(
             f"Unknown evaluation condition {value!r}; choose one of: {allowed}."
         ) from exc
@@ -174,8 +208,13 @@ def build_condition(
         policy = FixedWorkflowPolicy(model)
     elif condition is EvaluationCondition.TOOL_AGENT_NO_REFLECTION:
         policy = LLMToolPolicy(model)
-    else:
+    elif condition in {
+        EvaluationCondition.FULL_REFLECTIVE_AGENT,
+        EvaluationCondition.FULL_REFLECTIVE_AGENT_NO_RUNTIME_VERIFICATION,
+    }:
         policy = ReflectiveLLMToolPolicy(model)
+    else:
+        raise AssertionError(f"Unhandled evaluation condition: {condition}")
 
     return ConfiguredCondition(
         spec=spec,

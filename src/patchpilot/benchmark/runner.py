@@ -12,6 +12,7 @@ from patchpilot.agent import (
     AgentToolExecutor,
     TraceRecorder,
 )
+from patchpilot.agent.executor import VerificationMode
 from patchpilot.benchmark.workspace import (
     BenchmarkWorkspace,
     PreparedBenchmark,
@@ -56,12 +57,14 @@ class BenchmarkRunner:
         policy: AgentPolicy,
         metadata: dict[str, str] | None,
         test_timeout_seconds: int,
+        verification_mode: VerificationMode,
     ) -> dict[str, str]:
         result = dict(metadata or {})
         result.update(
             {
                 "policy_class": cls._qualified_name(policy),
                 "test_timeout_seconds": str(test_timeout_seconds),
+                "runtime_verification_mode": verification_mode.value,
                 "trace_schema_version": "2.0",
             }
         )
@@ -94,6 +97,7 @@ class BenchmarkRunner:
         budget: ExecutionBudget | None = None,
         metadata: dict[str, str] | None = None,
         test_timeout_seconds: int = 60,
+        verification_mode: VerificationMode = VerificationMode.STRICT,
     ) -> BenchmarkRun:
         """Execute one complete bounded benchmark run."""
         resolved_manifest = (
@@ -111,6 +115,7 @@ class BenchmarkRunner:
             prepared.workspace_root,
             prepared.task,
             test_timeout_seconds=test_timeout_seconds,
+            verification_mode=verification_mode,
         )
         loop = AgentControlLoop(
             policy=policy,
@@ -122,6 +127,7 @@ class BenchmarkRunner:
             policy,
             metadata,
             test_timeout_seconds,
+            verification_mode,
         )
         final_state = loop.run(
             state,

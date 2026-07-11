@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
 from time import perf_counter
 from typing import Literal
@@ -82,6 +83,13 @@ class _FinishArguments(_Arguments):
     message: str = Field(min_length=3, max_length=2000)
 
 
+class VerificationMode(StrEnum):
+    """Runtime enforcement mode used by verification ablations."""
+
+    STRICT = "strict"
+    DISABLED = "disabled"
+
+
 _TERMINAL_STATES = {
     AgentStatus.SUCCEEDED,
     AgentStatus.FAILED,
@@ -99,6 +107,7 @@ class AgentToolExecutor:
         task: RepairTask,
         test_timeout_seconds: int = 60,
         repeated_action_guard: RepeatedActionGuard | None = None,
+        verification_mode: VerificationMode = VerificationMode.STRICT,
     ) -> None:
         self.sandbox = RepositorySandbox(workspace_root, task)
         self.test_runner = TestRunner(
@@ -109,6 +118,7 @@ class AgentToolExecutor:
         self.patch_manager = PatchManager(self.sandbox, task)
         self.syntax_checker = SyntaxChecker(self.sandbox)
         self.repeated_action_guard = repeated_action_guard or RepeatedActionGuard()
+        self.verification_mode = VerificationMode(verification_mode)
         self._started_at = perf_counter()
 
     @staticmethod
@@ -221,34 +231,38 @@ class AgentToolExecutor:
                     "transactionally rolled back.",
                 )
 
-            if state.syntax_check_required:
-                return self._reject(
-                    state,
-                    action,
-                    "Success requires a passing syntax check for the current "
-                    "repository revision.",
+            if self.verification_mode is VerificationMode.STRICT:
+                if state.syntax_check_required:
+                    return self._reject(
+                        state,
+                        action,
+                        "Success requires a passing syntax check for the current "
+                        "repository revision.",
+                    )
+
+                if state.current_attempt_id is not None:
+                    return self._reject(
+                        state,
+                        action,
+                        "Success requires full-suite acceptance of the current "
+                        "patch attempt.",
+                    )
+
+                verified = (
+                    state.full_suite_passed
+                    and state.verified_revision == state.repository_revision
                 )
 
-            if state.current_attempt_id is not None:
-                return self._reject(
-                    state,
-                    action,
-                    "Success requires full-suite acceptance of the current "
-                    "patch attempt.",
-                )
-
-            verified = (
-                state.full_suite_passed
-                and state.verified_revision == state.repository_revision
-            )
-
-            if not verified:
-                return self._reject(
-                    state,
-                    action,
-                    "Success requires a passing full test suite "
-                    "for the current repository revision.",
-                )
+                if not verified:
+                    return self._reject(
+                        state,
+                        action,
+                        "Success requires a passing full test suite "
+                        "for the current repository revision.",
+                    )
+            elif state.current_attempt_id is not None:
+                self.patch_manager.accept_attempt(state.current_attempt_id)
+                self._clear_current_attempt(state)
 
             state.status = AgentStatus.SUCCEEDED
             state.terminal_failure_category = None
@@ -474,28 +488,34 @@ class AgentToolExecutor:
         if action.tool is ToolName.APPLY_PATCH:
             state.usage.patch_attempts += 1
 
-        if (
-            action.tool is ToolName.APPLY_PATCH
-            and state.current_attempt_id is not None
-            and not state.syntax_check_required
-        ):
-            return self._reject(
-                state,
-                action,
-                "The current patch attempt must pass the full test suite or "
-                "be rolled back before another patch attempt.",
-            )
+        if self.verification_mode is VerificationMode.STRICT:
+            if (
+                action.tool is ToolName.APPLY_PATCH
+                and state.current_attempt_id is not None
+                and not state.syntax_check_required
+            ):
+                return self._reject(
+                    state,
+                    action,
+                    "The current patch attempt must pass the full test suite or "
+                    "be rolled back before another patch attempt.",
+                )
 
-        if state.syntax_check_required and action.tool in {
-            ToolName.APPLY_PATCH,
-            ToolName.RUN_TESTS,
-        }:
-            return self._reject(
-                state,
-                action,
-                "A passing syntax check is required for the current repository "
-                "revision before tests or another patch.",
-            )
+            if state.syntax_check_required and action.tool in {
+                ToolName.APPLY_PATCH,
+                ToolName.RUN_TESTS,
+            }:
+                return self._reject(
+                    state,
+                    action,
+                    "A passing syntax check is required for the current repository "
+                    "revision before tests or another patch.",
+                )
+        elif (
+            action.tool is ToolName.APPLY_PATCH and state.current_attempt_id is not None
+        ):
+            self.patch_manager.accept_attempt(state.current_attempt_id)
+            self._clear_current_attempt(state)
 
         no_progress_reason = self.repeated_action_guard.rejection_reason(
             state,

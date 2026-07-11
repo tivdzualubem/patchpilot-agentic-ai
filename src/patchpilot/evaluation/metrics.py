@@ -22,8 +22,11 @@ class RunMetricRow(BaseModel):
     run_id: str = Field(min_length=1)
     task_id: str = Field(min_length=1)
     condition: str = Field(min_length=1)
+    runtime_verification_mode: str = Field(min_length=1)
     status: str = Field(min_length=1)
     succeeded: bool
+    verified_success: bool
+    unverified_success: bool
     full_suite_passed: bool
     policy_failure: bool
     model_calls: int = Field(ge=0)
@@ -70,8 +73,12 @@ class SummaryMetricRow(BaseModel):
     condition: str = Field(min_length=1)
     runs: int = Field(ge=0)
     successes: int = Field(ge=0)
+    verified_successes: int = Field(ge=0)
+    unverified_successes: int = Field(ge=0)
     full_suite_passes: int = Field(ge=0)
     repair_rate: float = Field(ge=0, le=1)
+    verified_repair_rate: float = Field(ge=0, le=1)
+    unverified_success_rate: float = Field(ge=0, le=1)
     full_suite_pass_rate: float = Field(ge=0, le=1)
     invalid_patch_runs: int = Field(ge=0)
     invalid_patch_rate: float = Field(ge=0, le=1)
@@ -112,6 +119,7 @@ def collect_run_metrics(
     run_id: str,
     condition: str,
     state: AgentState,
+    runtime_verification_mode: str = "strict",
 ) -> RunMetricRow:
     """Extract reproducible evaluation metrics from one final state."""
     pairs = list(
@@ -193,13 +201,22 @@ def collect_run_metrics(
     policy_failure = bool(
         final_message and final_message.startswith("The decision policy failed safely:")
     )
+    succeeded = state.status == AgentStatus.SUCCEEDED
+    verified_success = bool(
+        succeeded
+        and state.full_suite_passed
+        and state.verified_revision == state.repository_revision
+    )
 
     return RunMetricRow(
         run_id=run_id,
         task_id=state.task.task_id,
         condition=condition,
+        runtime_verification_mode=runtime_verification_mode,
         status=state.status.value,
-        succeeded=state.status == AgentStatus.SUCCEEDED,
+        succeeded=succeeded,
+        verified_success=verified_success,
+        unverified_success=succeeded and not verified_success,
         full_suite_passed=state.full_suite_passed,
         policy_failure=policy_failure,
         model_calls=state.model_calls,
@@ -259,6 +276,10 @@ def summarise_runs(rows: Iterable[RunMetricRow]) -> list[SummaryMetricRow]:
     for condition, condition_rows in sorted(grouped.items()):
         count = len(condition_rows)
         successes = sum(1 for row in condition_rows if row.succeeded)
+        verified_successes = sum(1 for row in condition_rows if row.verified_success)
+        unverified_successes = sum(
+            1 for row in condition_rows if row.unverified_success
+        )
         full_passes = sum(1 for row in condition_rows if row.full_suite_passed)
         invalid_patch_runs = sum(
             1 for row in condition_rows if row.invalid_patch_count > 0
@@ -293,8 +314,12 @@ def summarise_runs(rows: Iterable[RunMetricRow]) -> list[SummaryMetricRow]:
                 condition=condition,
                 runs=count,
                 successes=successes,
+                verified_successes=verified_successes,
+                unverified_successes=unverified_successes,
                 full_suite_passes=full_passes,
                 repair_rate=successes / count,
+                verified_repair_rate=verified_successes / count,
+                unverified_success_rate=unverified_successes / count,
                 full_suite_pass_rate=full_passes / count,
                 invalid_patch_runs=invalid_patch_runs,
                 invalid_patch_rate=invalid_patch_runs / count,

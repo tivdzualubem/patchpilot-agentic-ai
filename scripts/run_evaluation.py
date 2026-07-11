@@ -20,8 +20,11 @@ from patchpilot.evaluation import (
     RunMetricRow,
     build_condition,
     collect_run_metrics,
-    condition_values,
     summarise_runs,
+)
+from patchpilot.evaluation.conditions import (
+    VERIFICATION_ABLATION_CONDITIONS,
+    all_condition_values,
 )
 from patchpilot.models import OllamaChatModel
 
@@ -115,13 +118,18 @@ def git_commit(project_root: Path) -> str:
 def parse_args() -> argparse.Namespace:
     """Parse reproducible experiment parameters."""
     parser = argparse.ArgumentParser(
-        description=("Run one or all four paired PatchPilot evaluation conditions.")
+        description=(
+            "Run canonical PatchPilot conditions or the paired verification ablation."
+        )
     )
     parser.add_argument(
         "--condition",
         default="all",
-        choices=("all", *condition_values()),
-        help="Condition to run; 'all' runs the complete paired experiment.",
+        choices=("all", "verification-ablation", *all_condition_values()),
+        help=(
+            "Condition to run; 'all' runs the four primary conditions and "
+            "'verification-ablation' runs the paired reflective-agent arms."
+        ),
     )
     parser.add_argument(
         "--model",
@@ -188,6 +196,8 @@ def selected_conditions(
     """Resolve one condition or the complete paired set."""
     if value == "all":
         return PRIMARY_CONDITIONS
+    if value == "verification-ablation":
+        return VERIFICATION_ABLATION_CONDITIONS
     return (EvaluationCondition(value),)
 
 
@@ -249,11 +259,13 @@ def run_condition(
             budget=configured.spec.budget,
             metadata=metadata,
             test_timeout_seconds=args.test_timeout_seconds,
+            verification_mode=configured.spec.verification_mode,
         )
         row = collect_run_metrics(
             run_id=run_id,
             condition=condition.value,
             state=run.state,
+            runtime_verification_mode=(configured.spec.verification_mode.value),
         )
         rows.append(row)
         print(
