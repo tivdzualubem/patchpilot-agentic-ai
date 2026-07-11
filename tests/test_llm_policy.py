@@ -1,6 +1,10 @@
 import pytest
 
-from patchpilot.agent import PolicyResponseError, StructuredLLMPolicy
+from patchpilot.agent import (
+    AgentDecision,
+    PolicyResponseError,
+    StructuredLLMPolicy,
+)
 from patchpilot.schemas import (
     AgentState,
     ObservationStatus,
@@ -129,6 +133,7 @@ def test_first_decision_runs_full_suite_without_model_call() -> None:
 
     decision = policy.decide(AgentState(task=make_task()))
 
+    assert isinstance(decision, AgentDecision)
     assert decision.action.tool is ToolName.RUN_TESTS
     assert decision.action.arguments == {}
 

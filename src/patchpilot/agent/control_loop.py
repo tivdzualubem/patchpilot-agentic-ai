@@ -62,11 +62,18 @@ class AgentControlLoop:
             if decision.plan:
                 state.plan = list(decision.plan)
 
-            if decision.hypothesis is not None:
-                state.current_hypothesis = decision.hypothesis
+            previous_hypothesis = state.current_hypothesis
 
-            if decision.reflection is not None and state.current_hypothesis is not None:
-                state.rejected_hypotheses.append(decision.reflection)
+            if decision.reflection is not None:
+                state.reflections.append(decision.reflection)
+
+            if decision.hypothesis is not None:
+                if (
+                    previous_hypothesis is not None
+                    and decision.hypothesis != previous_hypothesis
+                ):
+                    state.rejected_hypotheses.append(previous_hypothesis)
+                state.current_hypothesis = decision.hypothesis
 
             self.executor.execute(state, decision.action)
             self._checkpoint(state, run_id, metadata)

@@ -1,4 +1,3 @@
-
 from patchpilot.agent import AgentControlLoop, AgentDecision
 from patchpilot.schemas import (
     AgentState,
@@ -75,3 +74,45 @@ def test_policy_failure_escalates_safely() -> None:
 
     assert result.status is AgentStatus.ESCALATED
     assert "RuntimeError" in str(result.final_message)
+
+
+class ReflectingPolicy:
+    def decide(self, state: AgentState) -> AgentDecision:
+        return AgentDecision(
+            reasoning_summary="Revise the failed repair hypothesis.",
+            plan=["Continue using the revised failure explanation."],
+            hypothesis="The loop bound is incorrect.",
+            reflection=(
+                "The comparison-only hypothesis did not explain "
+                "the remaining boundary failure."
+            ),
+            action=ToolAction(
+                tool=ToolName.FINISH,
+                arguments={
+                    "status": "succeeded",
+                    "message": "Reflection state recorded.",
+                },
+                rationale="Stop after recording the revised hypothesis.",
+            ),
+        )
+
+
+def test_control_loop_tracks_reflection_and_rejected_hypothesis() -> None:
+    state = make_state()
+    state.current_hypothesis = "The comparison operator is incorrect."
+
+    loop = AgentControlLoop(
+        policy=ReflectingPolicy(),
+        executor=SuccessExecutor(),
+    )
+    result = loop.run(state)
+
+    assert result.current_hypothesis == "The loop bound is incorrect."
+    assert result.rejected_hypotheses == ["The comparison operator is incorrect."]
+    assert result.reflections == [
+        (
+            "The comparison-only hypothesis did not explain "
+            "the remaining boundary failure."
+        )
+    ]
+    assert result.plan == ["Continue using the revised failure explanation."]

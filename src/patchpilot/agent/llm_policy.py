@@ -6,8 +6,7 @@ import difflib
 import re
 from typing import Protocol
 
-from pydantic import BaseModel, ConfigDict, Field
-
+from patchpilot.agent.policy import AgentDecision
 from patchpilot.schemas import AgentState, ObservationStatus, ToolAction, ToolName
 
 
@@ -21,18 +20,6 @@ class PolicyResponseError(RuntimeError):
     ) -> None:
         super().__init__(message)
         self.raw_response = raw_response
-
-
-class AgentDecision(BaseModel):
-    """One validated decision produced by the policy."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    reasoning_summary: str = Field(min_length=3, max_length=2000)
-    plan: list[str] = Field(min_length=1, max_length=20)
-    hypothesis: str | None = Field(default=None, max_length=2000)
-    reflection: str | None = Field(default=None, max_length=2000)
-    action: ToolAction
 
 
 class TextGenerationModel(Protocol):

@@ -108,12 +108,8 @@ class RepairTask(BaseModel):
         ],
         min_length=1,
     )
-    allowed_paths: list[str] = Field(
-        default_factory=lambda: ["src"]
-    )
-    forbidden_paths: list[str] = Field(
-        default_factory=lambda: ["tests"]
-    )
+    allowed_paths: list[str] = Field(default_factory=lambda: ["src"])
+    forbidden_paths: list[str] = Field(default_factory=lambda: ["tests"])
 
     @field_validator(
         "repository_root",
@@ -133,9 +129,7 @@ class RepairTask(BaseModel):
             path = PurePosixPath(raw_path)
 
             if path.is_absolute() or ".." in path.parts:
-                raise ValueError(
-                    "Paths must be relative and must not contain '..'."
-                )
+                raise ValueError("Paths must be relative and must not contain '..'.")
 
         return value
 
@@ -174,15 +168,14 @@ class AgentState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task: RepairTask
-    budget: ExecutionBudget = Field(
-        default_factory=ExecutionBudget
-    )
+    budget: ExecutionBudget = Field(default_factory=ExecutionBudget)
     usage: BudgetUsage = Field(default_factory=BudgetUsage)
     status: AgentStatus = AgentStatus.READY
 
     plan: list[str] = Field(default_factory=list)
     current_hypothesis: str | None = None
     rejected_hypotheses: list[str] = Field(default_factory=list)
+    reflections: list[str] = Field(default_factory=list)
 
     actions: list[ToolAction] = Field(default_factory=list)
     observations: list[ToolObservation] = Field(default_factory=list)
@@ -191,7 +184,6 @@ class AgentState(BaseModel):
     repository_revision: int = Field(default=0, ge=0)
     verified_revision: int | None = Field(default=None, ge=0)
     full_suite_passed: bool = False
-
 
     final_message: str | None = None
 
@@ -205,7 +197,4 @@ class AgentState(BaseModel):
             AgentStatus.BUDGET_EXHAUSTED,
         }
 
-        return (
-            self.status not in terminal
-            and not self.usage.exhausted(self.budget)
-        )
+        return self.status not in terminal and not self.usage.exhausted(self.budget)
