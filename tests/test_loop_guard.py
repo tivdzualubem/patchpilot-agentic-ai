@@ -214,3 +214,30 @@ def test_syntax_verification_resets_no_progress_streak() -> None:
     )
 
     assert state.no_progress_streak == 0
+
+
+def test_transactional_attempt_state_resets_no_progress_streak() -> None:
+    guard = RepeatedActionGuard()
+    state = make_state()
+    record_action(
+        guard,
+        state,
+        make_action(
+            ToolName.READ_FILE,
+            {"relative_path": "src/example.py"},
+        ),
+    )
+
+    state.no_progress_streak = 1
+    state.current_attempt_id = 1
+    state.current_attempt_files = ["src/example.py"]
+    record_action(
+        guard,
+        state,
+        make_action(
+            ToolName.SEARCH_CODE,
+            {"query": "return"},
+        ),
+    )
+
+    assert state.no_progress_streak == 0

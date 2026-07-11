@@ -536,6 +536,19 @@ class PatchManager:
                 str(exc),
             )
 
+    def accept_attempt(self, attempt_id: int) -> None:
+        """Mark the latest patch attempt verified without reverting its files."""
+        if not self._attempts:
+            raise PatchPolicyError("No active patch attempt is available to accept.")
+
+        attempt = self._attempts[-1]
+        if attempt.attempt_id != attempt_id:
+            raise PatchPolicyError(
+                "Only the latest active patch attempt can be accepted."
+            )
+
+        self._attempts.pop()
+
     def restore_attempt(self) -> ToolObservation:
         """Atomically rollback every file changed by the latest patch attempt."""
         started_at = perf_counter()

@@ -121,3 +121,24 @@ def test_non_python_changes_do_not_require_python_syntax_check() -> None:
     state.repository_revision = 1
 
     assert state.syntax_check_required is False
+
+
+def test_failed_attempt_requires_reflection_until_recorded() -> None:
+    state = AgentState(task=build_task())
+    state.last_failed_attempt_id = 4
+
+    assert state.reflection_required is True
+
+    state.last_reflected_attempt_id = 4
+
+    assert state.reflection_required is False
+
+
+def test_transactional_attempt_state_defaults_are_empty() -> None:
+    state = AgentState(task=build_task())
+
+    assert state.current_attempt_id is None
+    assert state.current_attempt_files == []
+    assert state.rollback_required is False
+    assert state.last_failed_attempt_id is None
+    assert state.last_rolled_back_attempt_id is None

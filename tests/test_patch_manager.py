@@ -389,3 +389,30 @@ def test_restore_attempt_without_active_attempt_reports_error(
 
     assert result.status is ObservationStatus.ERROR
     assert "No active patch attempt" in result.summary
+
+
+def test_accept_attempt_preserves_changes_and_closes_transaction(
+    patch_environment: tuple[Path, PatchManager],
+) -> None:
+    source, manager = patch_environment
+    manager.apply_patch(valid_patch())
+
+    manager.accept_attempt(1)
+
+    assert "return left + right" in source.read_text(encoding="utf-8")
+    assert manager.current_attempt_id is None
+    assert manager.current_attempt_files == ()
+    assert manager.changed_files == ("src/calculator.py",)
+
+
+def test_accept_attempt_rejects_non_latest_identifier(
+    patch_environment: tuple[Path, PatchManager],
+) -> None:
+    _, manager = patch_environment
+    manager.apply_patch(valid_patch())
+
+    with pytest.raises(
+        ValueError,
+        match="latest active",
+    ):
+        manager.accept_attempt(2)

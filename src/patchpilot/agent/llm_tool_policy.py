@@ -77,7 +77,10 @@ class LLMToolPolicy:
                     "optional changed file; omit it to restore all changed files"
                 )
             },
-            "purpose": "Rollback a failed source modification.",
+            "purpose": (
+                "Manually restore a changed file or all run changes. Failed "
+                "verification is rolled back transactionally by the runtime."
+            ),
         },
         "finish": {
             "arguments": {
@@ -115,8 +118,11 @@ class LLMToolPolicy:
             "contract. The runtime, not you, validates and executes the action. "
             "Never edit tests or forbidden paths. Prefer evidence-gathering before "
             "patching. Use a minimal unified diff for apply_patch. After every "
-            "successful patch, choose check_syntax before tests or another patch. "
-            "Do not report success until a full test run has passed for the current "
+            "successful patch, choose check_syntax before tests. The runtime "
+            "transactionally rolls back the active attempt after failed syntax "
+            "or test verification. Do not propose another patch until the current "
+            "attempt has passed the full suite or has been rolled back. Do not "
+            "report success until a full test run has passed for the current "
             "revision. "
             "The reflection field must be null because this policy is the "
             "no-reflection ablation. Return only one JSON object matching the "
@@ -193,6 +199,19 @@ class LLMToolPolicy:
             "repository_revision": state.repository_revision,
             "syntax_verified_revision": state.syntax_verified_revision,
             "syntax_check_required": state.syntax_check_required,
+            "current_attempt_id": state.current_attempt_id,
+            "current_attempt_files": state.current_attempt_files,
+            "rollback_required": state.rollback_required,
+            "last_failed_attempt_id": state.last_failed_attempt_id,
+            "last_failed_attempt_files": state.last_failed_attempt_files,
+            "last_failed_verification_tool": (
+                state.last_failed_verification_tool.value
+                if state.last_failed_verification_tool is not None
+                else None
+            ),
+            "last_rolled_back_attempt_id": (state.last_rolled_back_attempt_id),
+            "last_rolled_back_attempt_files": (state.last_rolled_back_attempt_files),
+            "reflection_required": state.reflection_required,
             "verified_revision": state.verified_revision,
             "full_suite_passed": state.full_suite_passed,
         }
@@ -274,7 +293,12 @@ class LLMToolPolicy:
         raw_response: str,
     ) -> AgentDecision:
         """Apply policy-mode rules after shared schema validation."""
-        del state
+        if state.rollback_required:
+            raise PolicyResponseError(
+                "Runtime transactional rollback must complete before another "
+                "model-directed decision.",
+                raw_response=raw_response,
+            )
 
         if decision.reflection is not None:
             raise PolicyResponseError(

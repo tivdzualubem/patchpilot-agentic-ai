@@ -216,10 +216,13 @@ def test_successful_syntax_check_forces_test_verification() -> None:
     assert decision.action.tool is ToolName.RUN_TESTS
 
 
-def test_failed_syntax_check_restores_changed_file() -> None:
+def test_failed_syntax_check_waits_for_runtime_rollback() -> None:
     state = read_state()
     state.changed_files.append("src/calculator.py")
     state.repository_revision = 1
+    state.current_attempt_id = 1
+    state.current_attempt_files = ["src/calculator.py"]
+    state.rollback_required = True
     state.actions.append(
         ToolAction(
             tool=ToolName.CHECK_SYNTAX,
@@ -236,10 +239,11 @@ def test_failed_syntax_check_restores_changed_file() -> None:
         )
     )
 
-    decision = StructuredLLMPolicy(NoCallModel()).decide(state)
-
-    assert decision.action.tool is ToolName.RESTORE_FILE
-    assert decision.action.arguments == {"relative_path": "src/calculator.py"}
+    with pytest.raises(
+        PolicyResponseError,
+        match="transactional rollback",
+    ):
+        StructuredLLMPolicy(NoCallModel()).decide(state)
 
 
 def test_invalid_diff_fails_safely() -> None:
@@ -347,9 +351,12 @@ def test_search_result_reads_file_under_allowed_source_root() -> None:
     assert decision.action.arguments == {"relative_path": "python_programs/gcd.py"}
 
 
-def test_failed_verification_restores_changed_file() -> None:
+def test_failed_verification_waits_for_runtime_rollback() -> None:
     state = read_state()
     state.changed_files.append("src/calculator.py")
+    state.current_attempt_id = 1
+    state.current_attempt_files = ["src/calculator.py"]
+    state.rollback_required = True
     state.actions.append(
         ToolAction(tool=ToolName.RUN_TESTS, arguments={}, rationale="Run tests.")
     )
@@ -361,10 +368,11 @@ def test_failed_verification_restores_changed_file() -> None:
         )
     )
 
-    decision = StructuredLLMPolicy(NoCallModel()).decide(state)
-
-    assert decision.action.tool is ToolName.RESTORE_FILE
-    assert decision.action.arguments == {"relative_path": "src/calculator.py"}
+    with pytest.raises(
+        PolicyResponseError,
+        match="transactional rollback",
+    ):
+        StructuredLLMPolicy(NoCallModel()).decide(state)
 
 
 def test_restore_success_reads_clean_file_before_retry() -> None:
@@ -398,3 +406,29 @@ def test_policy_error_keeps_raw_response() -> None:
 
     assert exc_info.value.raw_response is not None
     assert "no source change" in exc_info.value.raw_response
+
+
+def test_runtime_attempt_rollback_reads_restored_attempt_file() -> None:
+    state = read_state()
+    state.last_rolled_back_attempt_id = 1
+    state.last_rolled_back_attempt_files = ["src/calculator.py"]
+    state.actions.append(
+        ToolAction(
+            tool=ToolName.RESTORE_FILE,
+            arguments={"scope": "failed_attempt", "attempt_id": 1},
+            rationale="Runtime-enforced transactional rollback.",
+        )
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.RESTORE_FILE,
+            status=ObservationStatus.OK,
+            summary="Rolled back patch attempt 1 across 1 file(s).",
+            output="src/calculator.py",
+        )
+    )
+
+    decision = StructuredLLMPolicy(NoCallModel()).decide(state)
+
+    assert decision.action.tool is ToolName.READ_FILE
+    assert decision.action.arguments == {"relative_path": "src/calculator.py"}

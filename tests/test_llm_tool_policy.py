@@ -119,6 +119,8 @@ def test_model_selects_first_tool_and_receives_decision_schema() -> None:
     assert "tool-agent-001" in model.user_prompts[0]
     assert '"allowed_paths": [' in model.user_prompts[0]
     assert '"syntax_check_required": false' in model.user_prompts[0]
+    assert '"current_attempt_id": null' in model.user_prompts[0]
+    assert '"rollback_required": false' in model.user_prompts[0]
 
 
 def test_recent_failure_evidence_is_included_in_prompt() -> None:
@@ -250,3 +252,55 @@ def test_pending_syntax_gate_is_exposed_to_model() -> None:
     assert decision.action.tool is ToolName.CHECK_SYNTAX
     assert '"syntax_check_required": true' in model.user_prompts[0]
     assert '"syntax_verified_revision": null' in model.user_prompts[0]
+
+
+def test_transactional_attempt_state_is_exposed_to_model() -> None:
+    state = AgentState(task=make_task())
+    state.current_attempt_id = 3
+    state.current_attempt_files = ["src/calculator.py"]
+    state.last_failed_attempt_id = 2
+    state.last_failed_attempt_files = ["src/helpers.py"]
+    state.last_rolled_back_attempt_id = 2
+    state.last_rolled_back_attempt_files = ["src/helpers.py"]
+    model = ScriptedModel(
+        [
+            decision_json(
+                tool="run_tests",
+                arguments={},
+            )
+        ]
+    )
+
+    decision = LLMToolPolicy(model).decide(state)
+
+    assert decision.action.tool is ToolName.RUN_TESTS
+    prompt = model.user_prompts[0]
+    assert '"current_attempt_id": 3' in prompt
+    assert '"last_failed_attempt_id": 2' in prompt
+    assert '"last_rolled_back_attempt_id": 2' in prompt
+
+
+def test_model_decision_is_rejected_while_runtime_rollback_is_pending() -> None:
+    state = AgentState(task=make_task())
+    state.current_attempt_id = 1
+    state.current_attempt_files = ["src/calculator.py"]
+    state.rollback_required = True
+    model = ScriptedModel(
+        [
+            decision_json(
+                tool="read_file",
+                arguments={"relative_path": "src/calculator.py"},
+            )
+        ]
+    )
+
+    with pytest.raises(
+        PolicyResponseError,
+        match="transactional rollback",
+    ):
+        LLMToolPolicy(
+            model,
+            max_parse_attempts=1,
+        ).decide(state)
+
+    assert model.calls == 1

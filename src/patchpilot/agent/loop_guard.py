@@ -72,6 +72,10 @@ class RepeatedActionGuard:
         return ProgressSnapshot(
             repository_revision=state.repository_revision,
             syntax_verified_revision=state.syntax_verified_revision,
+            current_attempt_id=state.current_attempt_id,
+            rollback_required=state.rollback_required,
+            last_failed_attempt_id=state.last_failed_attempt_id,
+            last_reflected_attempt_id=state.last_reflected_attempt_id,
             latest_test_evidence_hash=cls._latest_test_evidence_hash(state),
             current_hypothesis=state.current_hypothesis,
             changed_files=tuple(sorted(state.changed_files)),

@@ -316,6 +316,12 @@ class StructuredLLMPolicy:
 
     def decide(self, state: AgentState) -> AgentDecision:
         """Generate the next staged repair decision."""
+        if state.rollback_required:
+            raise PolicyResponseError(
+                "Runtime transactional rollback must complete before the "
+                "scaffolded policy can continue."
+            )
+
         if not state.actions or not state.observations:
             return self._make_decision(
                 summary="Run the full test suite before inspecting code.",
@@ -340,15 +346,10 @@ class StructuredLLMPolicy:
                     rationale="The current repository revision is verified.",
                 )
 
-            if state.changed_files:
-                return self._make_decision(
-                    summary=(
-                        "Restore the last changed source after failed verification."
-                    ),
-                    plan="Rollback the failed patch before trying another repair.",
-                    tool=ToolName.RESTORE_FILE,
-                    arguments={"relative_path": state.changed_files[0]},
-                    rationale="Avoid stacking repairs on top of a failed patch.",
+            if state.current_attempt_id is not None:
+                raise PolicyResponseError(
+                    "Failed verification requires runtime transactional rollback "
+                    "before the scaffolded policy continues."
                 )
 
             query = self._failure_query(state)
@@ -384,13 +385,20 @@ class StructuredLLMPolicy:
             last_action.tool is ToolName.RESTORE_FILE
             and last_observation.status is ObservationStatus.OK
         ):
+            relative_path = last_action.arguments.get("relative_path")
+            if not isinstance(relative_path, str) or not relative_path:
+                if state.last_rolled_back_attempt_files:
+                    relative_path = state.last_rolled_back_attempt_files[0]
+                else:
+                    raise PolicyResponseError(
+                        "Rollback completed without a source file to inspect."
+                    )
+
             return self._make_decision(
                 summary="Read restored source before retrying repair.",
                 plan="Inspect the clean source before another patch attempt.",
                 tool=ToolName.READ_FILE,
-                arguments={
-                    "relative_path": str(last_action.arguments["relative_path"])
-                },
+                arguments={"relative_path": relative_path},
                 rationale="Retry from a clean source snapshot.",
             )
 
@@ -420,13 +428,10 @@ class StructuredLLMPolicy:
                     rationale="Verify the current source revision.",
                 )
 
-            if state.changed_files:
-                return self._make_decision(
-                    summary="Restore source after failed syntax validation.",
-                    plan="Rollback the invalid patch before another repair attempt.",
-                    tool=ToolName.RESTORE_FILE,
-                    arguments={"relative_path": state.changed_files[0]},
-                    rationale="Do not test or extend a syntactically invalid patch.",
+            if state.current_attempt_id is not None:
+                raise PolicyResponseError(
+                    "Failed syntax validation requires runtime transactional "
+                    "rollback before the scaffolded policy continues."
                 )
 
         raise PolicyResponseError(

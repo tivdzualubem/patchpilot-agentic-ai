@@ -130,6 +130,8 @@ def test_patch_updates_revision_and_invalidates_verification(
     assert state.full_suite_passed is False
     assert state.verified_revision is None
     assert state.changed_files == ["src/calculator.py"]
+    assert state.current_attempt_id == 1
+    assert state.current_attempt_files == ["src/calculator.py"]
 
 
 def test_success_requires_full_suite_verification(
@@ -226,6 +228,8 @@ def test_verified_current_revision_can_finish_successfully(
     assert state.syntax_verified_revision == 1
     assert tests.status is ObservationStatus.OK
     assert state.verified_revision == 1
+    assert state.current_attempt_id is None
+    assert state.current_attempt_files == []
     assert finished.status is ObservationStatus.OK
     assert state.status is AgentStatus.SUCCEEDED
 
@@ -519,6 +523,9 @@ def test_syntax_check_reports_invalid_changed_source(
     assert "src/calculator.py:2:" in result.output
     assert state.syntax_verified_revision is None
     assert state.syntax_check_required is True
+    assert state.rollback_required is True
+    assert state.last_failed_attempt_id == 1
+    assert state.last_failed_verification_tool is ToolName.CHECK_SYNTAX
 
 
 def test_syntax_check_rejects_unexpected_arguments(
@@ -624,15 +631,127 @@ def test_restore_clears_syntax_gate_when_no_changes_remain(
     )
     executor.execute(state, action(ToolName.CHECK_SYNTAX))
 
-    restored = executor.execute(
-        state,
-        action(
-            ToolName.RESTORE_FILE,
-            {"relative_path": "src/calculator.py"},
-        ),
-    )
+    restored = executor.rollback_failed_attempt(state)
 
     assert restored.status is ObservationStatus.OK
+    assert "patch attempt 1" in restored.summary
     assert state.changed_files == []
     assert state.syntax_check_required is False
     assert state.syntax_verified_revision == state.repository_revision
+    assert state.rollback_required is False
+    assert state.current_attempt_id is None
+    assert state.last_rolled_back_attempt_id == 1
+    assert state.last_rolled_back_attempt_files == ["src/calculator.py"]
+    assert state.actions[-1].tool is ToolName.RESTORE_FILE
+    assert state.actions[-1].arguments["scope"] == "failed_attempt"
+
+
+def test_second_patch_remains_blocked_after_syntax_until_full_suite(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+    executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": repair_patch()}),
+    )
+    executor.execute(state, action(ToolName.CHECK_SYNTAX))
+
+    result = executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": repair_patch()}),
+    )
+
+    assert result.status is ObservationStatus.REJECTED
+    assert "full test suite" in result.summary
+    assert state.current_attempt_id == 1
+
+
+def test_failed_tests_mark_attempt_for_transactional_rollback(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+    wrong_patch = repair_patch().replace(
+        "return left + right",
+        "return left * right",
+    )
+    executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": wrong_patch}),
+    )
+    executor.execute(state, action(ToolName.CHECK_SYNTAX))
+
+    failed = executor.execute(state, action(ToolName.RUN_TESTS))
+
+    assert failed.status is ObservationStatus.ERROR
+    assert state.rollback_required is True
+    assert state.last_failed_attempt_id == 1
+    assert state.last_failed_attempt_files == ["src/calculator.py"]
+    assert state.last_failed_verification_tool is ToolName.RUN_TESTS
+
+
+def test_policy_action_is_blocked_while_runtime_rollback_is_pending(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+    executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": invalid_syntax_patch()}),
+    )
+    executor.execute(state, action(ToolName.CHECK_SYNTAX))
+
+    result = executor.execute(
+        state,
+        action(ToolName.READ_FILE, {"relative_path": "src/calculator.py"}),
+    )
+
+    assert result.status is ObservationStatus.REJECTED
+    assert "transactional rollback" in result.summary
+
+
+def test_transactional_rollback_preserves_earlier_accepted_changes(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+    helper = executor.sandbox.repository_root / "src" / "helpers.py"
+    helper.write_text("VALUE = 1\n", encoding="utf-8")
+
+    executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": repair_patch()}),
+    )
+    executor.execute(state, action(ToolName.CHECK_SYNTAX))
+    executor.execute(state, action(ToolName.RUN_TESTS))
+
+    second_patch = (
+        "diff --git a/src/calculator.py b/src/calculator.py\n"
+        "--- a/src/calculator.py\n"
+        "+++ b/src/calculator.py\n"
+        "@@ -1,2 +1,2 @@\n"
+        " def add(left: int, right: int) -> int:\n"
+        "-    return left + right\n"
+        "+    return (\n"
+        "diff --git a/src/helpers.py b/src/helpers.py\n"
+        "--- a/src/helpers.py\n"
+        "+++ b/src/helpers.py\n"
+        "@@ -1 +1 @@\n"
+        "-VALUE = 1\n"
+        "+VALUE = 2\n"
+    )
+    executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": second_patch}),
+    )
+    executor.execute(state, action(ToolName.CHECK_SYNTAX))
+
+    rolled_back = executor.rollback_failed_attempt(state)
+
+    calculator = executor.sandbox.repository_root / "src" / "calculator.py"
+    assert rolled_back.status is ObservationStatus.OK
+    assert "return left + right" in calculator.read_text(encoding="utf-8")
+    assert helper.read_text(encoding="utf-8") == "VALUE = 1\n"
+    assert state.changed_files == ["src/calculator.py"]
+    assert state.last_rolled_back_attempt_id == 2
+    assert state.last_rolled_back_attempt_files == [
+        "src/calculator.py",
+        "src/helpers.py",
+    ]

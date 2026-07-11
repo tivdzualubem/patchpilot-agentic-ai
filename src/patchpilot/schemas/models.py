@@ -170,6 +170,10 @@ class ProgressSnapshot(BaseModel):
 
     repository_revision: int = Field(ge=0)
     syntax_verified_revision: int | None = Field(default=None, ge=0)
+    current_attempt_id: int | None = Field(default=None, ge=1)
+    rollback_required: bool = False
+    last_failed_attempt_id: int | None = Field(default=None, ge=1)
+    last_reflected_attempt_id: int | None = Field(default=None, ge=1)
     latest_test_evidence_hash: str | None = Field(
         default=None,
         pattern=r"^[0-9a-f]{64}$",
@@ -201,6 +205,16 @@ class AgentState(BaseModel):
     progress_snapshots: list[ProgressSnapshot] = Field(default_factory=list)
     no_progress_streak: int = Field(default=0, ge=0)
 
+    current_attempt_id: int | None = Field(default=None, ge=1)
+    current_attempt_files: list[str] = Field(default_factory=list)
+    rollback_required: bool = False
+    last_failed_attempt_id: int | None = Field(default=None, ge=1)
+    last_failed_attempt_files: list[str] = Field(default_factory=list)
+    last_failed_verification_tool: ToolName | None = None
+    last_rolled_back_attempt_id: int | None = Field(default=None, ge=1)
+    last_rolled_back_attempt_files: list[str] = Field(default_factory=list)
+    last_reflected_attempt_id: int | None = Field(default=None, ge=1)
+
     repository_revision: int = Field(default=0, ge=0)
     syntax_verified_revision: int | None = Field(default=None, ge=0)
     verified_revision: int | None = Field(default=None, ge=0)
@@ -217,6 +231,14 @@ class AgentState(BaseModel):
         return (
             has_changed_python
             and self.syntax_verified_revision != self.repository_revision
+        )
+
+    @property
+    def reflection_required(self) -> bool:
+        """Return whether the latest failed attempt still needs reflection."""
+        return (
+            self.last_failed_attempt_id is not None
+            and self.last_reflected_attempt_id != self.last_failed_attempt_id
         )
 
     @property

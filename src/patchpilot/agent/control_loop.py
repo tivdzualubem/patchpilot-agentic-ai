@@ -66,6 +66,8 @@ class AgentControlLoop:
 
             if decision.reflection is not None:
                 state.reflections.append(decision.reflection)
+                if state.last_failed_attempt_id is not None:
+                    state.last_reflected_attempt_id = state.last_failed_attempt_id
 
             if decision.hypothesis is not None:
                 if (
@@ -77,6 +79,10 @@ class AgentControlLoop:
 
             self.executor.execute(state, decision.action)
             self._checkpoint(state, run_id, metadata)
+
+            if state.rollback_required:
+                self.executor.rollback_failed_attempt(state)
+                self._checkpoint(state, run_id, metadata)
 
             if state.status in {
                 AgentStatus.SUCCEEDED,

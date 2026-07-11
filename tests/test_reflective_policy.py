@@ -57,19 +57,23 @@ def decision_json(
     *,
     reflection: str | None,
     hypothesis: str | None,
-    tool: str = "restore_file",
+    tool: str = "read_file",
 ) -> str:
+    arguments: dict[str, object] = {}
+    if tool in {"read_file", "restore_file"}:
+        arguments["relative_path"] = "src/calculator.py"
+
     return json.dumps(
         {
             "reasoning_summary": (
                 "Use the failed verification evidence to revise the repair."
             ),
-            "plan": ["Rollback the failed patch and inspect the clean source."],
+            "plan": ["Inspect the restored source using the revised hypothesis."],
             "hypothesis": hypothesis,
             "reflection": reflection,
             "action": {
                 "tool": tool,
-                "arguments": {"relative_path": "src/calculator.py"},
+                "arguments": arguments,
                 "rationale": "Continue from a clean, evidence-grounded state.",
             },
         }
@@ -79,8 +83,12 @@ def decision_json(
 def failed_verification_state() -> AgentState:
     state = AgentState(task=make_task())
     state.current_hypothesis = "The comparison operator is incorrect."
-    state.changed_files = ["src/calculator.py"]
-    state.repository_revision = 1
+    state.repository_revision = 2
+    state.last_failed_attempt_id = 1
+    state.last_failed_attempt_files = ["src/calculator.py"]
+    state.last_failed_verification_tool = ToolName.RUN_TESTS
+    state.last_rolled_back_attempt_id = 1
+    state.last_rolled_back_attempt_files = ["src/calculator.py"]
 
     state.actions.extend(
         [
@@ -93,6 +101,11 @@ def failed_verification_state() -> AgentState:
                 tool=ToolName.RUN_TESTS,
                 arguments={},
                 rationale="Verify the patched repository.",
+            ),
+            ToolAction(
+                tool=ToolName.RESTORE_FILE,
+                arguments={"scope": "failed_attempt", "attempt_id": 1},
+                rationale="Runtime-enforced transactional rollback.",
             ),
         ]
     )
@@ -109,6 +122,12 @@ def failed_verification_state() -> AgentState:
                 summary="Tests still fail.",
                 output="Two boundary tests still fail.",
             ),
+            ToolObservation(
+                tool=ToolName.RESTORE_FILE,
+                status=ObservationStatus.OK,
+                summary="Rolled back patch attempt 1 across 1 file(s).",
+                output="src/calculator.py",
+            ),
         ]
     )
     return state
@@ -117,8 +136,12 @@ def failed_verification_state() -> AgentState:
 def failed_syntax_state() -> AgentState:
     state = AgentState(task=make_task())
     state.current_hypothesis = "The replacement expression is valid."
-    state.changed_files = ["src/calculator.py"]
-    state.repository_revision = 1
+    state.repository_revision = 2
+    state.last_failed_attempt_id = 1
+    state.last_failed_attempt_files = ["src/calculator.py"]
+    state.last_failed_verification_tool = ToolName.CHECK_SYNTAX
+    state.last_rolled_back_attempt_id = 1
+    state.last_rolled_back_attempt_files = ["src/calculator.py"]
     state.actions.extend(
         [
             ToolAction(
@@ -130,6 +153,11 @@ def failed_syntax_state() -> AgentState:
                 tool=ToolName.CHECK_SYNTAX,
                 arguments={},
                 rationale="Validate changed Python syntax.",
+            ),
+            ToolAction(
+                tool=ToolName.RESTORE_FILE,
+                arguments={"scope": "failed_attempt", "attempt_id": 1},
+                rationale="Runtime-enforced transactional rollback.",
             ),
         ]
     )
@@ -145,6 +173,12 @@ def failed_syntax_state() -> AgentState:
                 status=ObservationStatus.ERROR,
                 summary="Python syntax check failed.",
                 output="src/calculator.py:5:12: invalid syntax",
+            ),
+            ToolObservation(
+                tool=ToolName.RESTORE_FILE,
+                status=ObservationStatus.OK,
+                summary="Rolled back patch attempt 1 across 1 file(s).",
+                output="src/calculator.py",
             ),
         ]
     )
@@ -172,9 +206,9 @@ def test_failed_verification_requires_and_accepts_reflection() -> None:
 
     assert decision.reflection is not None
     assert decision.hypothesis == "The loop bound is off by one."
-    assert decision.action.tool is ToolName.RESTORE_FILE
+    assert decision.action.tool is ToolName.READ_FILE
     assert "REFLECTION REQUIRED" in model.user_prompts[0]
-    assert "failed post-patch verification" in model.system_prompts[0]
+    assert "transactionally rolls back" in model.system_prompts[0]
 
 
 def test_missing_reflection_after_failed_verification_is_rejected() -> None:
