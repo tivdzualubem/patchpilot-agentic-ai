@@ -23,6 +23,13 @@ class RunMetricRow(BaseModel):
     task_id: str = Field(min_length=1)
     condition: str = Field(min_length=1)
     runtime_verification_mode: str = Field(min_length=1)
+    benchmark_suite: str = Field(
+        default="unspecified",
+        min_length=1,
+    )
+    origin_type: str = Field(default="unspecified", min_length=1)
+    difficulty: str = Field(default="unspecified", min_length=1)
+    defect_category: str = Field(default="unspecified", min_length=1)
     status: str = Field(min_length=1)
     succeeded: bool
     verified_success: bool
@@ -137,6 +144,10 @@ def collect_run_metrics(
     condition: str,
     state: AgentState,
     runtime_verification_mode: str = "strict",
+    benchmark_suite: str = "unspecified",
+    origin_type: str = "unspecified",
+    difficulty: str = "unspecified",
+    defect_category: str = "unspecified",
 ) -> RunMetricRow:
     """Extract reproducible evaluation metrics from one final state."""
     pairs = list(
@@ -240,6 +251,10 @@ def collect_run_metrics(
         task_id=state.task.task_id,
         condition=condition,
         runtime_verification_mode=runtime_verification_mode,
+        benchmark_suite=benchmark_suite,
+        origin_type=origin_type,
+        difficulty=difficulty,
+        defect_category=defect_category,
         status=state.status.value,
         succeeded=succeeded,
         verified_success=verified_success,

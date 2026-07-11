@@ -22,11 +22,20 @@ from patchpilot.evaluation import (
     collect_run_metrics,
     summarise_runs,
 )
+from patchpilot.evaluation.catalog import (
+    BenchmarkCatalog,
+    CatalogTask,
+    discover_manifest_root,
+    load_primary_research_catalog,
+    select_catalog_tasks,
+)
 from patchpilot.evaluation.conditions import (
     VERIFICATION_ABLATION_CONDITIONS,
     all_condition_values,
 )
 from patchpilot.models import OllamaChatModel
+
+DEFAULT_RESEARCH_CATALOG = "generated_benchmarks/research_suite.json"
 
 
 def build_run_id(
@@ -54,22 +63,11 @@ def safe_experiment_id(value: str) -> str:
     return normalized[:80].rstrip("-")
 
 
-def benchmark_manifests(
-    project_root: Path,
-    manifest_root: str,
-) -> list[Path]:
-    """Return all benchmark manifests in stable order."""
-    root = Path(manifest_root)
-    if not root.is_absolute():
-        root = project_root / root
-    return sorted(root.glob("*/task.json"))
-
-
 def write_csv(
     path: Path,
     rows: list[dict[str, object]],
 ) -> None:
-    """Write dictionaries as one deterministic CSV file."""
+    """Write dictionaries as one deterministic LF-only CSV file."""
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
         path.write_text("", encoding="utf-8")
@@ -79,6 +77,7 @@ def write_csv(
         writer = csv.DictWriter(
             handle,
             fieldnames=list(rows[0]),
+            lineterminator="\n",
         )
         writer.writeheader()
         writer.writerows(rows)
@@ -119,7 +118,8 @@ def parse_args() -> argparse.Namespace:
     """Parse reproducible experiment parameters."""
     parser = argparse.ArgumentParser(
         description=(
-            "Run canonical PatchPilot conditions or the paired verification ablation."
+            "Run canonical PatchPilot conditions on the validated research "
+            "catalog or an explicitly selected custom manifest root."
         )
     )
     parser.add_argument(
@@ -170,7 +170,16 @@ def parse_args() -> argparse.Namespace:
         "--limit",
         type=int,
         default=None,
-        help="Optional number of benchmark tasks in stable order.",
+        help="Optional number of tasks from the stable catalog order.",
+    )
+    parser.add_argument(
+        "--task-id",
+        action="append",
+        default=None,
+        help=(
+            "Optional exact catalog task ID. Repeat to select several tasks "
+            "while retaining catalog order."
+        ),
     )
     parser.add_argument(
         "--output-root",
@@ -178,14 +187,22 @@ def parse_args() -> argparse.Namespace:
         help="Directory for experiment outputs.",
     )
     parser.add_argument(
+        "--catalog",
+        default=DEFAULT_RESEARCH_CATALOG,
+        help=("Validated research catalog. Used unless --manifest-root is provided."),
+    )
+    parser.add_argument(
         "--manifest-root",
-        default="benchmarks",
-        help="Directory containing benchmark task folders.",
+        default=None,
+        help=(
+            "Explicit custom one-level task directory. This is intended for "
+            "sanity or development runs and overrides --catalog."
+        ),
     )
     parser.add_argument(
         "--experiment-id",
         default=None,
-        help=("Optional stable experiment id. Defaults to the current UTC timestamp."),
+        help="Optional stable experiment id. Defaults to the UTC timestamp.",
     )
     return parser.parse_args()
 
@@ -212,16 +229,35 @@ def build_model(args: argparse.Namespace) -> OllamaChatModel:
     )
 
 
+def resolve_catalog(
+    project_root: Path,
+    args: argparse.Namespace,
+) -> BenchmarkCatalog:
+    """Resolve the canonical research catalog or one explicit custom root."""
+    if args.manifest_root is not None:
+        return discover_manifest_root(project_root, args.manifest_root)
+    return load_primary_research_catalog(project_root, args.catalog)
+
+
+def relative_path(project_root: Path, path: Path) -> str:
+    """Return a project-relative path when possible."""
+    resolved = path.resolve(strict=True)
+    if resolved.is_relative_to(project_root):
+        return resolved.relative_to(project_root).as_posix()
+    return str(resolved)
+
+
 def run_condition(
     *,
     project_root: Path,
     result_root: Path,
-    manifests: list[Path],
+    tasks: tuple[CatalogTask, ...],
+    benchmark_suite: str,
     configured: ConfiguredCondition,
     experiment_id: str,
     args: argparse.Namespace,
 ) -> list[RunMetricRow]:
-    """Run one condition across the shared ordered manifest list."""
+    """Run one condition across the shared ordered task list."""
     condition = configured.spec.condition
     condition_root = result_root / condition.value
     runner = BenchmarkRunner(
@@ -236,24 +272,31 @@ def run_condition(
         flush=True,
     )
 
-    for manifest_path in manifests:
-        manifest = load_manifest(manifest_path)
+    for task in tasks:
         run_id = build_run_id(
             condition.value,
-            manifest.task_id,
+            task.task_id,
             experiment_id,
         )
         print(
-            f"RUN {condition.value} {manifest.task_id} -> {run_id}",
+            f"RUN {condition.value} {task.task_id} -> {run_id}",
             flush=True,
         )
         metadata = {
             **base_metadata,
             "experiment_id": experiment_id,
-            "task_id": manifest.task_id,
+            "task_id": task.task_id,
+            "benchmark_suite": benchmark_suite,
+            "origin_type": task.origin_type,
+            "difficulty": task.difficulty,
+            "defect_category": task.defect_category,
+            "manifest_path": relative_path(
+                project_root,
+                task.manifest_path,
+            ),
         }
         run = runner.run(
-            manifest_path=manifest_path,
+            manifest_path=task.manifest_path,
             policy=configured.policy,
             run_id=run_id,
             budget=configured.spec.budget,
@@ -265,11 +308,15 @@ def run_condition(
             run_id=run_id,
             condition=condition.value,
             state=run.state,
-            runtime_verification_mode=(configured.spec.verification_mode.value),
+            runtime_verification_mode=configured.spec.verification_mode.value,
+            benchmark_suite=benchmark_suite,
+            origin_type=task.origin_type,
+            difficulty=task.difficulty,
+            defect_category=task.defect_category,
         )
         rows.append(row)
         print(
-            f"DONE {condition.value} {manifest.task_id}: "
+            f"DONE {condition.value} {task.task_id}: "
             f"status={row.status} success={row.succeeded} "
             f"hidden={row.hidden_suite_status} "
             f"steps={row.steps} patches={row.patch_attempts}",
@@ -288,12 +335,26 @@ def experiment_configuration(
     *,
     project_root: Path,
     experiment_id: str,
-    manifests: list[Path],
+    catalog: BenchmarkCatalog,
+    tasks: tuple[CatalogTask, ...],
     conditions: tuple[EvaluationCondition, ...],
     configured: list[ConfiguredCondition],
     args: argparse.Namespace,
 ) -> dict[str, Any]:
     """Build the complete machine-readable experiment configuration."""
+    catalog_path = (
+        relative_path(project_root, catalog.catalog_path)
+        if catalog.catalog_path is not None
+        else None
+    )
+    selected_composition: dict[str, dict[str, int]] = {}
+    for field in ("origin_type", "difficulty", "defect_category"):
+        counts: dict[str, int] = {}
+        for task in tasks:
+            value = str(getattr(task, field))
+            counts[value] = counts.get(value, 0) + 1
+        selected_composition[field] = dict(sorted(counts.items()))
+
     return {
         "experiment_id": experiment_id,
         "git_commit": git_commit(project_root),
@@ -317,24 +378,31 @@ def experiment_configuration(
             "max_tokens": args.max_tokens,
             "timeout_seconds": args.model_timeout_seconds,
         },
+        "benchmark": {
+            "suite_id": catalog.suite_id,
+            "catalog_path": catalog_path,
+            "catalog_sha256": catalog.catalog_sha256,
+            "catalog_task_count": catalog.task_count,
+            "selected_task_count": len(tasks),
+            "catalog_composition": catalog.composition(),
+            "selected_composition": selected_composition,
+            "custom_manifest_root": args.manifest_root,
+        },
         "hidden_verification": {
             "phase": "post_run_external",
             "output_exposed_to_agent": False,
             "configured_manifest_count": sum(
                 1
-                for path in manifests
-                if load_manifest(path).hidden_test_root is not None
+                for task in tasks
+                if load_manifest(task.manifest_path).hidden_test_root is not None
             ),
         },
         "test_timeout_seconds": args.test_timeout_seconds,
-        "manifest_root": args.manifest_root,
-        "manifest_count": len(manifests),
+        "manifest_count": len(tasks),
         "manifest_order": [
-            str(path.relative_to(project_root))
-            if path.is_relative_to(project_root)
-            else str(path)
-            for path in manifests
+            relative_path(project_root, task.manifest_path) for task in tasks
         ],
+        "task_order": [task.task_id for task in tasks],
     }
 
 
@@ -346,17 +414,12 @@ def main() -> None:
     experiment_id = safe_experiment_id(args.experiment_id or timestamp)
     result_root = Path(args.output_root).expanduser().resolve() / experiment_id
 
-    manifests = benchmark_manifests(
-        project_root,
-        args.manifest_root,
+    catalog = resolve_catalog(project_root, args)
+    tasks = select_catalog_tasks(
+        catalog,
+        task_ids=args.task_id,
+        limit=args.limit,
     )
-    if args.limit is not None:
-        if args.limit < 1:
-            raise ValueError("--limit must be at least 1.")
-        manifests = manifests[: args.limit]
-    if not manifests:
-        raise FileNotFoundError("No benchmark manifests were found for evaluation.")
-
     conditions = selected_conditions(args.condition)
     configured = [
         build_condition(condition, build_model(args)) for condition in conditions
@@ -367,7 +430,8 @@ def main() -> None:
         experiment_configuration(
             project_root=project_root,
             experiment_id=experiment_id,
-            manifests=manifests,
+            catalog=catalog,
+            tasks=tasks,
             conditions=conditions,
             configured=configured,
             args=args,
@@ -380,7 +444,8 @@ def main() -> None:
             run_condition(
                 project_root=project_root,
                 result_root=result_root,
-                manifests=manifests,
+                tasks=tasks,
+                benchmark_suite=catalog.suite_id,
                 configured=item,
                 experiment_id=experiment_id,
                 args=args,
@@ -394,6 +459,9 @@ def main() -> None:
     write_csv(result_root / "summary.csv", summary_dicts)
     write_json(result_root / "summary.json", summary_dicts)
 
+    print(f"BENCHMARK_SUITE={catalog.suite_id}")
+    print(f"CATALOG_TASKS={catalog.task_count}")
+    print(f"SELECTED_TASKS={len(tasks)}")
     print(f"RESULT_ROOT={result_root}")
     print(f"RUNS_CSV={result_root / 'runs.csv'}")
     print(f"SUMMARY_CSV={result_root / 'summary.csv'}")
