@@ -1,0 +1,23 @@
+{
+  "allowed_paths": [
+    "src"
+  ],
+  "defect_category": "cursor_state_protocol",
+  "difficulty": "hard",
+  "expected_hidden_tests": 3,
+  "expected_initial_failures": 3,
+  "forbidden_paths": [
+    "tests"
+  ],
+  "goal": "Repair cursor pagination so cursors encode the absolute next offset, invalid cursors are rejected, and page boundaries never duplicate or skip items.",
+  "hidden_test_root": "challenge_benchmarks/challenge-cursor-pagination/hidden_tests",
+  "repository_root": "challenge_benchmarks/challenge-cursor-pagination/repository",
+  "task_id": "challenge-cursor-pagination",
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "title": "Stable opaque cursor pagination"
+}

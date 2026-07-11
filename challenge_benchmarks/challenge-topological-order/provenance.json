@@ -1,0 +1,41 @@
+{
+  "changed_line_count": 17,
+  "clean_reference_validation": {
+    "hidden_passed": true,
+    "hidden_returncode": 0,
+    "visible_passed": true,
+    "visible_returncode": 0
+  },
+  "clean_source_sha256": "d27a45685274f5ae4628331acc4405aa8dc5103c2c73e68a12cfed889a5c8b6c",
+  "defect_category": "graph_algorithm_invariant",
+  "defect_diff": "--- a/src/dependency.py\n+++ b/src/dependency.py\n@@ -1,35 +1,28 @@\n \"\"\"Dependency graph helpers.\"\"\"\n \n from __future__ import annotations\n-\n-import heapq\n \n \n def dependency_order(graph: dict[str, set[str]]) -> list[str]:\n     \"\"\"Return a deterministic topological order for node prerequisites.\"\"\"\n     nodes = set(graph)\n-    for prerequisites in graph.values():\n-        nodes.update(prerequisites)\n \n     dependents: dict[str, set[str]] = {node: set() for node in nodes}\n     indegree = {node: 0 for node in nodes}\n     for node, prerequisites in graph.items():\n-        indegree[node] += len(prerequisites)\n         for prerequisite in prerequisites:\n-            dependents[prerequisite].add(node)\n+            dependents.setdefault(node, set()).add(prerequisite)\n+            indegree[prerequisite] = indegree.get(prerequisite, 0) + 1\n \n     ready = [node for node, count in indegree.items() if count == 0]\n-    heapq.heapify(ready)\n     ordered: list[str] = []\n \n     while ready:\n-        node = heapq.heappop(ready)\n+        node = ready.pop()\n         ordered.append(node)\n-        for dependent in sorted(dependents[node]):\n+        for dependent in dependents.get(node, set()):\n             indegree[dependent] -= 1\n             if indegree[dependent] == 0:\n-                heapq.heappush(ready, dependent)\n+                ready.append(dependent)\n \n-    if len(ordered) != len(nodes):\n-        raise ValueError(\"dependency cycle detected\")\n     return ordered\n",
+  "defect_patterns": [
+    "wrong_indegree",
+    "missing_nodes",
+    "nondeterministic_order"
+  ],
+  "defective_source_sha256": "8793d9a993103209347093cdfa6b58d3d3c4b36d4f984d7dcd7b6b4aa1e83103",
+  "difficulty": "hard",
+  "generation": {
+    "command": "python scripts/create_manual_challenges.py --force --timeout-seconds 60",
+    "deterministic": true,
+    "script": "scripts/create_manual_challenges.py"
+  },
+  "hidden_tests_tree_sha256": "1508dd8fe71c7d39ee2f19a6d44c03ca46d40a456603a44e742346e7533c2bb6",
+  "hidden_validation": {
+    "collected_tests": 3,
+    "failed": 2,
+    "returncode": 1
+  },
+  "origin_type": "manual_challenge",
+  "rationale": "Requires preserving graph invariants across initialization, traversal, and cycle detection.",
+  "repository_tree_sha256": "fade2edfbc06e0c01b4f66ce6dbddcaa3465ec716a54cb15cd780a475cd3ec24",
+  "schema_version": "1.0",
+  "selection_rank": 3,
+  "source_file": "src/dependency.py",
+  "task_id": "challenge-topological-order",
+  "visible_validation": {
+    "failed": 3,
+    "returncode": 1
+  }
+}

@@ -33,7 +33,7 @@ testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 
 [tool.ruff]
-extend-exclude = ["artifacts", "generated_benchmarks"]
+extend-exclude = ["artifacts", "generated_benchmarks", "challenge_benchmarks"]
 line-length = 88
 target-version = "py312"
 

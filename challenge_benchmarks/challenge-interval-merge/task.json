@@ -1,0 +1,23 @@
+{
+  "allowed_paths": [
+    "src"
+  ],
+  "defect_category": "multi_line_interval_logic",
+  "difficulty": "hard",
+  "expected_hidden_tests": 3,
+  "expected_initial_failures": 2,
+  "forbidden_paths": [
+    "tests"
+  ],
+  "goal": "Repair the interval merge implementation so it sorts correctly, merges touching ranges, and preserves normalized interval bounds.",
+  "hidden_test_root": "challenge_benchmarks/challenge-interval-merge/hidden_tests",
+  "repository_root": "challenge_benchmarks/challenge-interval-merge/repository",
+  "task_id": "challenge-interval-merge",
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "title": "Merge overlapping and touching intervals"
+}

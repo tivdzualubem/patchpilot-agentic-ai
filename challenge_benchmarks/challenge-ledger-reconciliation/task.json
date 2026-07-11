@@ -1,0 +1,23 @@
+{
+  "allowed_paths": [
+    "src"
+  ],
+  "defect_category": "idempotent_financial_state",
+  "difficulty": "hard",
+  "expected_hidden_tests": 3,
+  "expected_initial_failures": 3,
+  "forbidden_paths": [
+    "tests"
+  ],
+  "goal": "Repair ledger reconciliation so duplicate transaction IDs are ignored, transfers are balanced, invalid amounts fail atomically, and input balances are preserved.",
+  "hidden_test_root": "challenge_benchmarks/challenge-ledger-reconciliation/hidden_tests",
+  "repository_root": "challenge_benchmarks/challenge-ledger-reconciliation/repository",
+  "task_id": "challenge-ledger-reconciliation",
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "title": "Idempotent transfer ledger reconciliation"
+}

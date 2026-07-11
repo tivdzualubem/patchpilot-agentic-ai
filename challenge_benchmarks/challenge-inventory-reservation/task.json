@@ -1,0 +1,23 @@
+{
+  "allowed_paths": [
+    "src"
+  ],
+  "defect_category": "transactional_state_management",
+  "difficulty": "hard",
+  "expected_hidden_tests": 3,
+  "expected_initial_failures": 3,
+  "forbidden_paths": [
+    "tests"
+  ],
+  "goal": "Repair inventory reservation so validation is atomic, exact depletion is allowed, and caller-owned stock is never mutated.",
+  "hidden_test_root": "challenge_benchmarks/challenge-inventory-reservation/hidden_tests",
+  "repository_root": "challenge_benchmarks/challenge-inventory-reservation/repository",
+  "task_id": "challenge-inventory-reservation",
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "title": "Atomic inventory reservation"
+}

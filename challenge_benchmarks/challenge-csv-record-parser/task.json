@@ -1,0 +1,23 @@
+{
+  "allowed_paths": [
+    "src"
+  ],
+  "defect_category": "state_machine_parser",
+  "difficulty": "hard",
+  "expected_hidden_tests": 3,
+  "expected_initial_failures": 2,
+  "forbidden_paths": [
+    "tests"
+  ],
+  "goal": "Repair the CSV parser so it handles quoted commas, escaped quotes, empty fields, and malformed unterminated records.",
+  "hidden_test_root": "challenge_benchmarks/challenge-csv-record-parser/hidden_tests",
+  "repository_root": "challenge_benchmarks/challenge-csv-record-parser/repository",
+  "task_id": "challenge-csv-record-parser",
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "title": "Quoted CSV record parsing"
+}

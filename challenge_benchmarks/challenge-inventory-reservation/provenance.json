@@ -1,0 +1,41 @@
+{
+  "changed_line_count": 14,
+  "clean_reference_validation": {
+    "hidden_passed": true,
+    "hidden_returncode": 0,
+    "visible_passed": true,
+    "visible_returncode": 0
+  },
+  "clean_source_sha256": "c8182b04fd05e53248d4a960217eeaf63399e4a7fa3ac51986571f228e30ec49",
+  "defect_category": "transactional_state_management",
+  "defect_diff": "--- a/src/inventory.py\n+++ b/src/inventory.py\n@@ -8,19 +8,13 @@\n     requests: list[tuple[str, int]],\n ) -> dict[str, int]:\n     \"\"\"Return remaining stock after atomically applying reservations.\"\"\"\n-    totals: dict[str, int] = {}\n+    remaining = stock\n     for sku, quantity in requests:\n-        if quantity <= 0:\n+        if quantity < 0:\n             raise ValueError(\"requested quantities must be positive\")\n-        totals[sku] = totals.get(sku, 0) + quantity\n-\n-    for sku, quantity in totals.items():\n-        if sku not in stock:\n+        if sku not in remaining:\n             raise KeyError(sku)\n-        if quantity > stock[sku]:\n+        if quantity >= remaining[sku]:\n             raise ValueError(f\"insufficient stock for {sku}\")\n-\n-    remaining = dict(stock)\n-    for sku, quantity in totals.items():\n         remaining[sku] -= quantity\n     return remaining\n",
+  "defect_patterns": [
+    "partial_mutation",
+    "wrong_boundary",
+    "aliasing"
+  ],
+  "defective_source_sha256": "f9e365319252dfdee7442cf0141d79ebc66754aef75dfa2fe50aca907edf96cb",
+  "difficulty": "hard",
+  "generation": {
+    "command": "python scripts/create_manual_challenges.py --force --timeout-seconds 60",
+    "deterministic": true,
+    "script": "scripts/create_manual_challenges.py"
+  },
+  "hidden_tests_tree_sha256": "54138a06a6530d37a65e1540304a3d3e25450355ec78dcefe2b96433b56b5274",
+  "hidden_validation": {
+    "collected_tests": 3,
+    "failed": 3,
+    "returncode": 1
+  },
+  "origin_type": "manual_challenge",
+  "rationale": "The repair must coordinate validation, copy semantics, and update ordering.",
+  "repository_tree_sha256": "b08ac70bd7582103e2da5826a609acd60402d286ebb3e30499a1368fd4691e5c",
+  "schema_version": "1.0",
+  "selection_rank": 2,
+  "source_file": "src/inventory.py",
+  "task_id": "challenge-inventory-reservation",
+  "visible_validation": {
+    "failed": 3,
+    "returncode": 1
+  }
+}

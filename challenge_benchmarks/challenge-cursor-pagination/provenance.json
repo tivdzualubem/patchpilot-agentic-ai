@@ -1,0 +1,41 @@
+{
+  "changed_line_count": 29,
+  "clean_reference_validation": {
+    "hidden_passed": true,
+    "hidden_returncode": 0,
+    "visible_passed": true,
+    "visible_returncode": 0
+  },
+  "clean_source_sha256": "82edf2b4c069cf85385b74abe7bae0a2a1bef3a2a93c5d6e08cf59606d83fe7c",
+  "defect_category": "cursor_state_protocol",
+  "defect_diff": "--- a/src/pagination.py\n+++ b/src/pagination.py\n@@ -8,23 +8,16 @@\n \n \n def _encode_cursor(offset: int) -> str:\n-    payload = json.dumps({\"offset\": offset}, separators=(\",\", \":\")).encode()\n-    return base64.urlsafe_b64encode(payload).decode().rstrip(\"=\")\n+    payload = json.dumps({\"offset\": offset}).encode()\n+    return base64.urlsafe_b64encode(payload).decode()\n \n \n def _decode_cursor(cursor: str | None) -> int:\n     if cursor is None:\n         return 0\n-    try:\n-        padding = \"=\" * (-len(cursor) % 4)\n-        payload = base64.urlsafe_b64decode(cursor + padding)\n-        data = json.loads(payload)\n-        offset = data[\"offset\"]\n-    except (ValueError, KeyError, TypeError, json.JSONDecodeError) as error:\n-        raise ValueError(\"invalid cursor\") from error\n-    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:\n-        raise ValueError(\"invalid cursor\")\n-    return offset\n+    payload = base64.urlsafe_b64decode(cursor)\n+    data = json.loads(payload)\n+    return int(data.get(\"offset\", 0))\n \n \n def paginate(\n@@ -34,18 +27,10 @@\n     cursor: str | None = None,\n ) -> tuple[list[Any], str | None]:\n     \"\"\"Return one page and an opaque cursor for the next page.\"\"\"\n-    if limit <= 0:\n+    if limit < 0:\n         raise ValueError(\"limit must be positive\")\n \n     offset = _decode_cursor(cursor)\n-    if offset > len(items):\n-        raise ValueError(\"cursor is beyond the collection\")\n-\n     page = items[offset : offset + limit]\n-    next_offset = offset + len(page)\n-    next_cursor = (\n-        _encode_cursor(next_offset)\n-        if next_offset < len(items)\n-        else None\n-    )\n+    next_cursor = _encode_cursor(len(page)) if page else None\n     return page, next_cursor\n",
+  "defect_patterns": [
+    "relative_offset",
+    "cursor_validation",
+    "boundary_protocol"
+  ],
+  "defective_source_sha256": "22ecaa21f553d0639528dfdeb5486bf94f46ee81299fbb4acb62e7e7ab055137",
+  "difficulty": "hard",
+  "generation": {
+    "command": "python scripts/create_manual_challenges.py --force --timeout-seconds 60",
+    "deterministic": true,
+    "script": "scripts/create_manual_challenges.py"
+  },
+  "hidden_tests_tree_sha256": "2eb11bc419f46e3cf648fe3b21698f587cd100368c1bd65fdec260c515e57718",
+  "hidden_validation": {
+    "collected_tests": 3,
+    "failed": 1,
+    "returncode": 1
+  },
+  "origin_type": "manual_challenge",
+  "rationale": "The fix spans cursor decoding, offset arithmetic, and terminal-page behavior.",
+  "repository_tree_sha256": "f088d7d19ec8c2854c68f310d114412cc82f212f0dc75c9b0659465a15ef60a4",
+  "schema_version": "1.0",
+  "selection_rank": 7,
+  "source_file": "src/pagination.py",
+  "task_id": "challenge-cursor-pagination",
+  "visible_validation": {
+    "failed": 3,
+    "returncode": 1
+  }
+}

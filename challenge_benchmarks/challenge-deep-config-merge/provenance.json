@@ -1,0 +1,41 @@
+{
+  "changed_line_count": 9,
+  "clean_reference_validation": {
+    "hidden_passed": true,
+    "hidden_returncode": 0,
+    "visible_passed": true,
+    "visible_returncode": 0
+  },
+  "clean_source_sha256": "e2dc91f1291712219b80bfb86e1c4e89754314b71e9996f27d3a51d22ae4eb19",
+  "defect_category": "recursive_data_merge",
+  "defect_diff": "--- a/src/config.py\n+++ b/src/config.py\n@@ -2,7 +2,6 @@\n \n from __future__ import annotations\n \n-from copy import deepcopy\n from typing import Any\n \n \n@@ -11,11 +10,13 @@\n     override: dict[str, Any],\n ) -> dict[str, Any]:\n     \"\"\"Deep-merge dictionaries without mutating either input.\"\"\"\n-    result = deepcopy(base)\n+    result = base\n     for key, value in override.items():\n         current = result.get(key)\n         if isinstance(current, dict) and isinstance(value, dict):\n-            result[key] = merge_config(current, value)\n+            current.update(value)\n+        elif isinstance(current, list) and isinstance(value, list):\n+            result[key] = current + value\n         else:\n-            result[key] = deepcopy(value)\n+            result[key] = value\n     return result\n",
+  "defect_patterns": [
+    "shallow_merge",
+    "input_mutation",
+    "wrong_list_semantics"
+  ],
+  "defective_source_sha256": "9d4ef20a34e6c28edf1e8e8200650ed6526ad827da4ef1333cac712a62d42ea2",
+  "difficulty": "hard",
+  "generation": {
+    "command": "python scripts/create_manual_challenges.py --force --timeout-seconds 60",
+    "deterministic": true,
+    "script": "scripts/create_manual_challenges.py"
+  },
+  "hidden_tests_tree_sha256": "2ba5946011b47f29bcac4b03fe497379832d38d3196b4eb653c4a3ec268ec9ac",
+  "hidden_validation": {
+    "collected_tests": 3,
+    "failed": 2,
+    "returncode": 1
+  },
+  "origin_type": "manual_challenge",
+  "rationale": "Requires recursive copy semantics and type-sensitive conflict resolution.",
+  "repository_tree_sha256": "06a412b26c2f61da6305dec65f2b9bfd861317b04b0c5c7c12255fe808845575",
+  "schema_version": "1.0",
+  "selection_rank": 4,
+  "source_file": "src/config.py",
+  "task_id": "challenge-deep-config-merge",
+  "visible_validation": {
+    "failed": 2,
+    "returncode": 1
+  }
+}
