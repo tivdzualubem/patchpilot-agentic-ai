@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "202ef96f2b32fdd26e52ef9e0c64e0da67a7239e6eb5b0b7a0babfbd565ed781",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "de0e712adb8445632e2839cfde21c6f1cd828c0ee0cdd93c7b818d14fda21a20",
+  "mutant_name": "mutmut_algorithms.core.x_is_palindrome__mutmut_5",
+  "mutant_status": "killed",
+  "mutated_function": "is_palindrome",
+  "operator_family": "comparison",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

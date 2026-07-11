@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "372ff6e0265940cf01c9077cb9d2df2bf1b6de7120b2e9b412779c9d84dcd3d8",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "de0e712adb8445632e2839cfde21c6f1cd828c0ee0cdd93c7b818d14fda21a20",
+  "mutant_name": "mutmut_algorithms.core.x_lcm__mutmut_10",
+  "mutant_status": "killed",
+  "mutated_function": "lcm",
+  "operator_family": "arithmetic",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

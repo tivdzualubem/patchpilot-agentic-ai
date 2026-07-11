@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "981cb2b6c0ae074132ac734608a4b0f6b38d0afab0ad8b67d646029049ad4e74",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "5ff03c97b758f536206b54ace923d1de7a661d8b12d5c7a3f91bbae09b408f43",
+  "mutant_name": "mutmut_textdata.core.x_remove_duplicate_words__mutmut_4",
+  "mutant_status": "killed",
+  "mutated_function": "remove_duplicate_words",
+  "operator_family": "boolean",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

@@ -1,24 +1,27 @@
 {
-  "task_id": "mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1",
-  "title": "Mutmut-generated killed mutant: mutmut_algorithms.core.x_count_vowels__mutmut_1",
-  "goal": "Repair the mutmut-generated Python defect so that all regression tests pass. Do not edit tests.",
-  "repository_root": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1/repository",
-  "defect_category": "mutmut_killed_mutant",
-  "difficulty": "medium",
   "allowed_paths": [
     "src/mutmut_algorithms"
   ],
+  "defect_category": "mutmut_constant",
+  "difficulty": "easy",
+  "expected_hidden_tests": 8,
+  "expected_initial_failures": 1,
   "forbidden_paths": [
     ".mutmut-cache",
     "__pycache__",
+    "hidden_tests",
     "mutants",
     "tests"
   ],
+  "goal": "Repair the Mutmut-generated Python defect so that all regression tests pass. Do not edit tests.",
+  "hidden_test_root": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1/hidden_tests",
+  "repository_root": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1/repository",
+  "task_id": "mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1",
   "test_command": [
     "python",
     "-m",
     "pytest",
     "-q"
   ],
-  "expected_initial_failures": 1
+  "title": "Mutmut-generated killed mutant: mutmut_algorithms.core.x_count_vowels__mutmut_1"
 }

@@ -514,7 +514,10 @@ def difficulty_for(
 
 
 def git_commit(project_root: Path) -> str:
-    """Return the generator Git commit."""
+    """Return the generator Git commit or a staged-run override."""
+    override = os.environ.get("PATCHPILOT_GENERATOR_COMMIT", "").strip()
+    if override:
+        return override
     result = run_command(
         ["git", "rev-parse", "HEAD"],
         cwd=project_root,
@@ -555,7 +558,11 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
         return
 
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=list(rows[0]),
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(rows)
 
@@ -576,6 +583,10 @@ def export_mutant_task(
     selected_from_killed: int,
     task_prefix: str,
     source_paths: Sequence[str],
+    test_paths: Sequence[str],
+    pytest_pythonpath: Sequence[str],
+    max_tasks: int,
+    max_per_function: int,
     forbidden_paths: Sequence[str],
     test_command_args: Sequence[str],
     hidden_source_root: Path,
@@ -654,6 +665,8 @@ def export_mutant_task(
         requested_difficulty,
     )
     remove_runtime_artifacts(repository_path)
+    exported_repository_hash = source_tree_sha256(repository_path)
+    hidden_tests_hash = source_tree_sha256(hidden_export_root)
 
     hidden_manifest_root = repository_root_for_manifest(
         hidden_export_root,
@@ -684,9 +697,16 @@ def export_mutant_task(
     provenance = MutmutProvenance(
         source_project=source_project,
         source_root_sha256=source_hash,
+        exported_repository_sha256=exported_repository_hash,
+        hidden_tests_sha256=hidden_tests_hash,
         generator_commit=generator_commit_value,
         mutmut_version=mutmut_version_value,
         generation_command=generation_command,
+        source_paths=list(source_paths),
+        test_paths=list(test_paths),
+        pytest_pythonpath=list(pytest_pythonpath),
+        max_tasks=max_tasks,
+        max_per_function=max_per_function,
         selection_rank=selection_rank,
         selected_from_total=selected_from_total,
         selected_from_killed=selected_from_killed,
@@ -717,6 +737,8 @@ def export_mutant_task(
             "mutated_function": descriptor.function,
             "visible_initial_failures": visible_failures,
             "hidden_initial_failures": hidden_failures,
+            "exported_repository_sha256": exported_repository_hash,
+            "hidden_tests_sha256": hidden_tests_hash,
             "provenance_file": "provenance.json",
         },
     )
@@ -810,6 +832,10 @@ def main() -> None:
     if args.max_per_function < 1:
         raise SystemExit("--max-per-function must be at least 1")
 
+    version = mutmut_version(project_root)
+    if version != "3.6.0":
+        raise SystemExit(f"Mutmut 3.6.0 is required; found {version!r}.")
+
     generation_root.mkdir(parents=True, exist_ok=True)
     copy_source_tree(source_root, work_root)
     ensure_mutmut_config(
@@ -866,15 +892,15 @@ def main() -> None:
 
     print("DESCRIBE killed mutants", flush=True)
     descriptors = describe_killed_mutants(killed, work_root=work_root)
-    selected = select_diverse_mutants(
+    candidate_pool = select_diverse_mutants(
         descriptors,
-        args.max_tasks,
+        len(descriptors),
         args.max_per_function,
     )
-    if len(selected) < args.max_tasks:
+    if len(candidate_pool) < args.max_tasks:
         raise SystemExit(
-            f"Only {len(selected)} diverse killed mutants were available; "
-            f"{args.max_tasks} were requested."
+            f"Only {len(candidate_pool)} diverse killed-mutant candidates "
+            f"were available; {args.max_tasks} were requested."
         )
 
     forbidden_paths = sorted(
@@ -887,13 +913,19 @@ def main() -> None:
         }
     )
     source_hash = source_tree_sha256(source_root)
-    version = mutmut_version(project_root)
     generator_commit_value = git_commit(project_root)
     generation_command = [sys.executable, *sys.argv]
     generated: list[GeneratedTask] = []
 
-    for rank, descriptor in enumerate(selected, start=1):
-        print(f"EXPORT {rank}/{len(selected)} {descriptor.name}", flush=True)
+    attempted_candidates = 0
+    for rank, descriptor in enumerate(candidate_pool, start=1):
+        if len(generated) >= args.max_tasks:
+            break
+        attempted_candidates += 1
+        print(
+            f"EXPORT candidate {rank}/{len(candidate_pool)} {descriptor.name}",
+            flush=True,
+        )
         task = export_mutant_task(
             descriptor=descriptor,
             selection_rank=rank,
@@ -909,6 +941,10 @@ def main() -> None:
             selected_from_killed=len(killed),
             task_prefix=args.task_prefix,
             source_paths=args.source_path,
+            test_paths=test_paths,
+            pytest_pythonpath=args.pytest_pythonpath,
+            max_tasks=args.max_tasks,
+            max_per_function=args.max_per_function,
             forbidden_paths=forbidden_paths,
             test_command_args=test_command_args,
             hidden_source_root=hidden_source_root,
@@ -920,7 +956,10 @@ def main() -> None:
         )
         if task is not None:
             generated.append(task)
-            print(f"DONE {task.task_id}", flush=True)
+            print(
+                f"DONE {task.task_id} ({len(generated)}/{args.max_tasks})",
+                flush=True,
+            )
 
     if len(generated) != args.max_tasks:
         raise SystemExit(
@@ -975,7 +1014,8 @@ def main() -> None:
             "mutants_total": len(mutants),
             "killed_mutants": len(killed),
             "described_killed_mutants": len(descriptors),
-            "selected_mutants": len(selected),
+            "candidate_pool_size": len(candidate_pool),
+            "attempted_candidates": attempted_candidates,
             "generated_tasks": len(generated),
             "max_tasks": args.max_tasks,
             "max_per_function": args.max_per_function,

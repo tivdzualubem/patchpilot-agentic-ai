@@ -31,13 +31,20 @@ class MutmutProvenance(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.1"] = "1.1"
     benchmark_kind: Literal["mutmut"] = "mutmut"
     source_project: str = Field(min_length=2, max_length=100)
     source_root_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    exported_repository_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    hidden_tests_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     generator_commit: str = Field(min_length=1, max_length=100)
     mutmut_version: str = Field(min_length=1, max_length=100)
     generation_command: list[str] = Field(min_length=1)
+    source_paths: list[str] = Field(min_length=1)
+    test_paths: list[str] = Field(min_length=1)
+    pytest_pythonpath: list[str] = Field(default_factory=list)
+    max_tasks: int = Field(ge=1)
+    max_per_function: int = Field(ge=1)
     selection_rank: int = Field(ge=1)
     selected_from_total: int = Field(ge=1)
     selected_from_killed: int = Field(ge=1)

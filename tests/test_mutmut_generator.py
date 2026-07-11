@@ -104,3 +104,22 @@ def test_pytest_count_handles_mixed_outcomes(
         generator_module.pytest_test_count("2 failed, 3 passed, 1 skipped in 0.02s")
         == 6
     )
+
+
+def test_csv_writer_uses_lf_line_endings(
+    generator_module: ModuleType,
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "tasks.csv"
+
+    generator_module.write_csv(
+        output,
+        [
+            {"task_id": "alpha", "status": "killed"},
+            {"task_id": "beta", "status": "killed"},
+        ],
+    )
+
+    raw = output.read_bytes()
+    assert b"\r\n" not in raw
+    assert raw == (b"task_id,status\nalpha,killed\nbeta,killed\n")

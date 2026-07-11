@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.mutmut]
+source_paths = ["src/mutmut_collections"]
+runner = "python -m pytest -q"
+pytest_add_cli_args_test_selection = ["tests"]

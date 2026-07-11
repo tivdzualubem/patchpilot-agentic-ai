@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "6fd9701e9554e943a2e050e642723b686d58d27dcdd43d4099418e1578e70fe0",
+  "hidden_initial_failures": 2,
+  "hidden_tests_sha256": "372ed3071e80fb451e96750a0f90f177f2ffb47528df723451b2899f17080eba",
+  "mutant_name": "mutmut_collections.core.x_frequency_map__mutmut_3",
+  "mutant_status": "killed",
+  "mutated_function": "frequency_map",
+  "operator_family": "arithmetic",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

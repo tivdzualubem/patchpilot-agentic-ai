@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "50470383491fe1fee1d9307a41b3f22cf5ebf70ad5d26bb2c83800149d029d80",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "5ff03c97b758f536206b54ace923d1de7a661d8b12d5c7a3f91bbae09b408f43",
+  "mutant_name": "mutmut_textdata.core.x_count_substring__mutmut_1",
+  "mutant_status": "killed",
+  "mutated_function": "count_substring",
+  "operator_family": "boolean",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

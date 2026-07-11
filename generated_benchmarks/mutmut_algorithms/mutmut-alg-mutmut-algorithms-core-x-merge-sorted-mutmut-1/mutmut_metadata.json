@@ -1,5 +1,0 @@
-{
-  "mutant_name": "mutmut_algorithms.core.x_merge_sorted__mutmut_1",
-  "mutant_status": "killed",
-  "expected_initial_failures": 1
-}

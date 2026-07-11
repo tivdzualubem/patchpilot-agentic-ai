@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "07f49d4e15508946310f22eb80f45122978e3d167f9ec8ca28e3e2d61d9d6e8d",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "5ff03c97b758f536206b54ace923d1de7a661d8b12d5c7a3f91bbae09b408f43",
+  "mutant_name": "mutmut_textdata.core.x_normalize_newlines__mutmut_1",
+  "mutant_status": "killed",
+  "mutated_function": "normalize_newlines",
+  "operator_family": "constant",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

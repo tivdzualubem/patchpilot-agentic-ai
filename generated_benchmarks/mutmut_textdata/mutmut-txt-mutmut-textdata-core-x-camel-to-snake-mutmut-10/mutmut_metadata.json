@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "da3fa85da2f3288c66779dd30fc7bb35eb8f84f1bf89be406467eb508337e314",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "5ff03c97b758f536206b54ace923d1de7a661d8b12d5c7a3f91bbae09b408f43",
+  "mutant_name": "mutmut_textdata.core.x_camel_to_snake__mutmut_10",
+  "mutant_status": "killed",
+  "mutated_function": "camel_to_snake",
+  "operator_family": "arithmetic",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

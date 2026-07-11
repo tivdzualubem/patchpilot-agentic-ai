@@ -1,0 +1,27 @@
+{
+  "allowed_paths": [
+    "src/mutmut_collections"
+  ],
+  "defect_category": "mutmut_boolean",
+  "difficulty": "medium",
+  "expected_hidden_tests": 9,
+  "expected_initial_failures": 1,
+  "forbidden_paths": [
+    ".mutmut-cache",
+    "__pycache__",
+    "hidden_tests",
+    "mutants",
+    "tests"
+  ],
+  "goal": "Repair the Mutmut-generated Python defect so that all regression tests pass. Do not edit tests.",
+  "hidden_test_root": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-index-of-max-mutmut-1/hidden_tests",
+  "repository_root": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-index-of-max-mutmut-1/repository",
+  "task_id": "mutmut-col-mutmut-collections-core-x-index-of-max-mutmut-1",
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "title": "Mutmut-generated killed mutant: mutmut_collections.core.x_index_of_max__mutmut_1"
+}

@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "1937e1f284fa9865ce301b2d64d3500156606baa1871b1d76804973f87adf6e7",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "372ed3071e80fb451e96750a0f90f177f2ffb47528df723451b2899f17080eba",
+  "mutant_name": "mutmut_collections.core.x_first_non_none__mutmut_1",
+  "mutant_status": "killed",
+  "mutated_function": "first_non_none",
+  "operator_family": "boolean",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

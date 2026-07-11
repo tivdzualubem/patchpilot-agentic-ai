@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "58730b1ae6dceebf64fc0c7116dbb3364dd9260d56d6f6d734e3482848c3248e",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "de0e712adb8445632e2839cfde21c6f1cd828c0ee0cdd93c7b818d14fda21a20",
+  "mutant_name": "mutmut_algorithms.core.x_clamp__mutmut_10",
+  "mutant_status": "killed",
+  "mutated_function": "clamp",
+  "operator_family": "constant",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}
