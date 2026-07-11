@@ -187,9 +187,16 @@ class LLMToolPolicy:
             "RECENT ACTION-OBSERVATION TRAJECTORY:\n"
             f"{cls._trajectory(state)}\n\n"
             "Choose the single best next tool action. Include a concise plan, "
-            "reasoning summary, optional current hypothesis, null reflection, "
-            "and one action with valid arguments."
+            "reasoning summary, optional current hypothesis, and one action "
+            "with valid arguments.\n"
+            f"{cls._reflection_instruction(state)}"
         )
+
+    @classmethod
+    def _reflection_instruction(cls, state: AgentState) -> str:
+        """Return the reflection rule included in the model prompt."""
+        del state
+        return "Set the reflection field to null for this no-reflection policy."
 
     @staticmethod
     def _candidate_json(raw_response: str) -> str:
@@ -243,6 +250,17 @@ class LLMToolPolicy:
                 raw_response=raw_response,
             )
 
+        return decision
+
+    def _validate_decision(
+        self,
+        state: AgentState,
+        decision: AgentDecision,
+        raw_response: str,
+    ) -> AgentDecision:
+        """Apply policy-mode rules after shared schema validation."""
+        del state
+
         if decision.reflection is not None:
             raise PolicyResponseError(
                 "The no-reflection policy requires reflection to be null.",
@@ -266,7 +284,12 @@ class LLMToolPolicy:
             )
 
             try:
-                return self._parse_decision(raw_response)
+                decision = self._parse_decision(raw_response)
+                return self._validate_decision(
+                    state,
+                    decision,
+                    raw_response,
+                )
             except PolicyResponseError as exc:
                 if attempt >= self.max_parse_attempts:
                     raise PolicyResponseError(
