@@ -304,3 +304,35 @@ def test_model_decision_is_rejected_while_runtime_rollback_is_pending() -> None:
         ).decide(state)
 
     assert model.calls == 1
+
+
+def test_model_call_and_parse_retry_accounting() -> None:
+    state = failed_state()
+    model = ScriptedModel(
+        [
+            "not valid json",
+            decision_json(
+                tool="read_file",
+                arguments={"relative_path": "src/calculator.py"},
+            ),
+        ]
+    )
+
+    decision = LLMToolPolicy(model).decide(state)
+
+    assert decision.action.tool is ToolName.READ_FILE
+    assert state.model_calls == 2
+    assert state.decision_parse_failures == 1
+
+
+def test_exhausted_parse_retries_are_all_counted() -> None:
+    state = failed_state()
+    invalid = decision_json(tool="delete_repository")
+
+    with pytest.raises(PolicyResponseError):
+        LLMToolPolicy(
+            ScriptedModel([invalid, invalid]),
+        ).decide(state)
+
+    assert state.model_calls == 2
+    assert state.decision_parse_failures == 2

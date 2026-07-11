@@ -48,6 +48,22 @@ class ObservationStatus(StrEnum):
     TIMEOUT = "timeout"
 
 
+class FailureCategory(StrEnum):
+    """Normalized failure categories for evaluation and diagnosis."""
+
+    MODEL_ERROR = "model_error"
+    DECISION_PARSE_ERROR = "decision_parse_error"
+    PATCH_REJECTED = "patch_rejected"
+    PATCH_APPLICATION_ERROR = "patch_application_error"
+    SYNTAX_VERIFICATION_FAILED = "syntax_verification_failed"
+    TEST_VERIFICATION_FAILED = "test_verification_failed"
+    ROLLBACK_FAILED = "rollback_failed"
+    NO_PROGRESS = "no_progress"
+    BUDGET_EXHAUSTED = "budget_exhausted"
+    USER_FAILED = "user_failed"
+    USER_ESCALATED = "user_escalated"
+
+
 class ExecutionBudget(BaseModel):
     """Hard limits for one bounded agent run."""
 
@@ -204,6 +220,15 @@ class AgentState(BaseModel):
     changed_files: list[str] = Field(default_factory=list)
     progress_snapshots: list[ProgressSnapshot] = Field(default_factory=list)
     no_progress_streak: int = Field(default=0, ge=0)
+
+    model_calls: int = Field(default=0, ge=0)
+    decision_parse_failures: int = Field(default=0, ge=0)
+    patch_rejection_count: int = Field(default=0, ge=0)
+    patch_application_failure_count: int = Field(default=0, ge=0)
+    verification_failure_count: int = Field(default=0, ge=0)
+    failed_attempt_ids: list[int] = Field(default_factory=list)
+    last_failure_category: FailureCategory | None = None
+    terminal_failure_category: FailureCategory | None = None
 
     current_attempt_id: int | None = Field(default=None, ge=1)
     current_attempt_files: list[str] = Field(default_factory=list)

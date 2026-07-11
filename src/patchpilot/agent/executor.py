@@ -12,6 +12,7 @@ from patchpilot.agent.loop_guard import RepeatedActionGuard
 from patchpilot.schemas import (
     AgentState,
     AgentStatus,
+    FailureCategory,
     ObservationStatus,
     RepairTask,
     ToolAction,
@@ -176,6 +177,8 @@ class AgentToolExecutor:
         state.last_failed_attempt_id = state.current_attempt_id
         state.last_failed_attempt_files = list(state.current_attempt_files)
         state.last_failed_verification_tool = verification_tool
+        if state.current_attempt_id not in state.failed_attempt_ids:
+            state.failed_attempt_ids.append(state.current_attempt_id)
 
     def _reject(
         self,
@@ -248,12 +251,17 @@ class AgentToolExecutor:
                 )
 
             state.status = AgentStatus.SUCCEEDED
+            state.terminal_failure_category = None
 
         elif arguments.status == "failed":
             state.status = AgentStatus.FAILED
+            state.last_failure_category = FailureCategory.USER_FAILED
+            state.terminal_failure_category = FailureCategory.USER_FAILED
 
         else:
             state.status = AgentStatus.ESCALATED
+            state.last_failure_category = FailureCategory.USER_ESCALATED
+            state.terminal_failure_category = FailureCategory.USER_ESCALATED
 
         state.final_message = arguments.message
 
@@ -399,6 +407,8 @@ class AgentToolExecutor:
             self._sync_current_attempt(state)
         else:
             state.status = AgentStatus.ESCALATED
+            state.last_failure_category = FailureCategory.ROLLBACK_FAILED
+            state.terminal_failure_category = FailureCategory.ROLLBACK_FAILED
             state.final_message = (
                 "Transactional rollback of the failed patch attempt failed."
             )
@@ -437,6 +447,8 @@ class AgentToolExecutor:
 
         if state.usage.exhausted(state.budget):
             state.status = AgentStatus.BUDGET_EXHAUSTED
+            state.last_failure_category = FailureCategory.BUDGET_EXHAUSTED
+            state.terminal_failure_category = FailureCategory.BUDGET_EXHAUSTED
             state.final_message = "A global execution budget was exhausted."
             return self._reject(
                 state,
@@ -496,6 +508,8 @@ class AgentToolExecutor:
                 >= self.repeated_action_guard.max_no_progress_events
             ):
                 state.status = AgentStatus.ESCALATED
+                state.last_failure_category = FailureCategory.NO_PROGRESS
+                state.terminal_failure_category = FailureCategory.NO_PROGRESS
                 state.final_message = (
                     "Run escalated after repeated no-progress action patterns."
                 )
@@ -515,6 +529,31 @@ class AgentToolExecutor:
             )
 
         observation, test_target = self._dispatch(action)
+
+        if action.tool is ToolName.APPLY_PATCH:
+            if observation.status is ObservationStatus.REJECTED:
+                state.patch_rejection_count += 1
+                state.last_failure_category = FailureCategory.PATCH_REJECTED
+            elif observation.status in {
+                ObservationStatus.ERROR,
+                ObservationStatus.TIMEOUT,
+            }:
+                state.patch_application_failure_count += 1
+                state.last_failure_category = FailureCategory.PATCH_APPLICATION_ERROR
+
+        if action.tool is ToolName.CHECK_SYNTAX and observation.status in {
+            ObservationStatus.ERROR,
+            ObservationStatus.TIMEOUT,
+        }:
+            state.verification_failure_count += 1
+            state.last_failure_category = FailureCategory.SYNTAX_VERIFICATION_FAILED
+
+        if action.tool is ToolName.RUN_TESTS and observation.status in {
+            ObservationStatus.ERROR,
+            ObservationStatus.TIMEOUT,
+        }:
+            state.verification_failure_count += 1
+            state.last_failure_category = FailureCategory.TEST_VERIFICATION_FAILED
 
         if (
             action.tool is ToolName.APPLY_PATCH

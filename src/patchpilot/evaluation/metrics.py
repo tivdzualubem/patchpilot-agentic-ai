@@ -26,6 +26,18 @@ class RunMetricRow(BaseModel):
     succeeded: bool
     full_suite_passed: bool
     policy_failure: bool
+    model_calls: int = Field(ge=0)
+    decision_parse_failures: int = Field(ge=0)
+    patch_rejection_count: int = Field(ge=0)
+    patch_application_failure_count: int = Field(ge=0)
+    verification_failure_count: int = Field(ge=0)
+    failed_attempt_count: int = Field(ge=0)
+    failed_attempt_ids: str
+    current_attempt_id: int | None = Field(default=None, ge=1)
+    last_failed_attempt_id: int | None = Field(default=None, ge=1)
+    last_rolled_back_attempt_id: int | None = Field(default=None, ge=1)
+    last_failure_category: str | None = None
+    terminal_failure_category: str | None = None
     steps: int = Field(ge=0)
     tool_calls: int = Field(ge=0)
     patch_attempts: int = Field(ge=0)
@@ -71,8 +83,16 @@ class SummaryMetricRow(BaseModel):
     no_progress_rate: float = Field(ge=0, le=1)
     budget_exhaustions: int = Field(ge=0)
     policy_failures: int = Field(ge=0)
+    decision_parse_failure_runs: int = Field(ge=0)
+    patch_rejection_runs: int = Field(ge=0)
+    verification_failure_runs: int = Field(ge=0)
     escalations: int = Field(ge=0)
     failures: int = Field(ge=0)
+    mean_model_calls: float = Field(ge=0)
+    mean_decision_parse_failures: float = Field(ge=0)
+    mean_patch_rejections: float = Field(ge=0)
+    mean_verification_failures: float = Field(ge=0)
+    mean_failed_attempts: float = Field(ge=0)
     mean_steps: float = Field(ge=0)
     mean_tool_calls: float = Field(ge=0)
     mean_patch_attempts: float = Field(ge=0)
@@ -182,6 +202,28 @@ def collect_run_metrics(
         succeeded=state.status == AgentStatus.SUCCEEDED,
         full_suite_passed=state.full_suite_passed,
         policy_failure=policy_failure,
+        model_calls=state.model_calls,
+        decision_parse_failures=state.decision_parse_failures,
+        patch_rejection_count=state.patch_rejection_count,
+        patch_application_failure_count=state.patch_application_failure_count,
+        verification_failure_count=state.verification_failure_count,
+        failed_attempt_count=len(state.failed_attempt_ids),
+        failed_attempt_ids=";".join(
+            str(attempt_id) for attempt_id in state.failed_attempt_ids
+        ),
+        current_attempt_id=state.current_attempt_id,
+        last_failed_attempt_id=state.last_failed_attempt_id,
+        last_rolled_back_attempt_id=state.last_rolled_back_attempt_id,
+        last_failure_category=(
+            state.last_failure_category.value
+            if state.last_failure_category is not None
+            else None
+        ),
+        terminal_failure_category=(
+            state.terminal_failure_category.value
+            if state.terminal_failure_category is not None
+            else None
+        ),
         steps=state.usage.steps,
         tool_calls=state.usage.tool_calls,
         patch_attempts=state.usage.patch_attempts,
@@ -230,6 +272,15 @@ def summarise_runs(rows: Iterable[RunMetricRow]) -> list[SummaryMetricRow]:
         )
         budget_exhaustions = sum(1 for row in condition_rows if row.budget_exhausted)
         policy_failures = sum(1 for row in condition_rows if row.policy_failure)
+        decision_parse_failure_runs = sum(
+            1 for row in condition_rows if row.decision_parse_failures > 0
+        )
+        patch_rejection_runs = sum(
+            1 for row in condition_rows if row.patch_rejection_count > 0
+        )
+        verification_failure_runs = sum(
+            1 for row in condition_rows if row.verification_failure_count > 0
+        )
         escalations = sum(
             1 for row in condition_rows if row.status == AgentStatus.ESCALATED.value
         )
@@ -255,8 +306,27 @@ def summarise_runs(rows: Iterable[RunMetricRow]) -> list[SummaryMetricRow]:
                 no_progress_rate=no_progress_runs / count,
                 budget_exhaustions=budget_exhaustions,
                 policy_failures=policy_failures,
+                decision_parse_failure_runs=decision_parse_failure_runs,
+                patch_rejection_runs=patch_rejection_runs,
+                verification_failure_runs=verification_failure_runs,
                 escalations=escalations,
                 failures=failures,
+                mean_model_calls=(
+                    sum(row.model_calls for row in condition_rows) / count
+                ),
+                mean_decision_parse_failures=(
+                    sum(row.decision_parse_failures for row in condition_rows) / count
+                ),
+                mean_patch_rejections=(
+                    sum(row.patch_rejection_count for row in condition_rows) / count
+                ),
+                mean_verification_failures=(
+                    sum(row.verification_failure_count for row in condition_rows)
+                    / count
+                ),
+                mean_failed_attempts=(
+                    sum(row.failed_attempt_count for row in condition_rows) / count
+                ),
                 mean_steps=(sum(row.steps for row in condition_rows) / count),
                 mean_tool_calls=(sum(row.tool_calls for row in condition_rows) / count),
                 mean_patch_attempts=(

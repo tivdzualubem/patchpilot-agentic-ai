@@ -316,6 +316,7 @@ class LLMToolPolicy:
         user_prompt = base_prompt
 
         for attempt in range(1, self.max_parse_attempts + 1):
+            state.model_calls += 1
             raw_response = self.model.generate(
                 system_prompt,
                 user_prompt,
@@ -330,6 +331,7 @@ class LLMToolPolicy:
                     raw_response,
                 )
             except PolicyResponseError as exc:
+                state.decision_parse_failures += 1
                 if attempt >= self.max_parse_attempts:
                     raise PolicyResponseError(
                         "Model did not return a valid tool decision after "

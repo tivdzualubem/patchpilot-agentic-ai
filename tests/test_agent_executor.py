@@ -9,6 +9,7 @@ from patchpilot.schemas import (
     AgentState,
     AgentStatus,
     ExecutionBudget,
+    FailureCategory,
     ObservationStatus,
     RepairTask,
     ToolAction,
@@ -339,6 +340,8 @@ def test_global_budget_blocks_additional_tool_calls(
 
     assert result.status is ObservationStatus.REJECTED
     assert state.status is AgentStatus.BUDGET_EXHAUSTED
+    assert state.last_failure_category is FailureCategory.BUDGET_EXHAUSTED
+    assert state.terminal_failure_category is FailureCategory.BUDGET_EXHAUSTED
 
 
 def test_failed_finish_records_terminal_status(
@@ -360,6 +363,8 @@ def test_failed_finish_records_terminal_status(
     assert result.status is ObservationStatus.OK
     assert state.status is AgentStatus.FAILED
     assert state.final_message == "No valid repair was found."
+    assert state.last_failure_category is FailureCategory.USER_FAILED
+    assert state.terminal_failure_category is FailureCategory.USER_FAILED
 
 
 def test_terminal_state_rejects_later_actions(
@@ -526,6 +531,9 @@ def test_syntax_check_reports_invalid_changed_source(
     assert state.rollback_required is True
     assert state.last_failed_attempt_id == 1
     assert state.last_failed_verification_tool is ToolName.CHECK_SYNTAX
+    assert state.verification_failure_count == 1
+    assert state.failed_attempt_ids == [1]
+    assert state.last_failure_category is FailureCategory.SYNTAX_VERIFICATION_FAILED
 
 
 def test_syntax_check_rejects_unexpected_arguments(
@@ -571,6 +579,8 @@ def test_repeated_action_cycle_is_rejected_and_escalated(
     assert state.no_progress_streak == 1
     assert state.final_message is not None
     assert "no-progress" in state.final_message
+    assert state.last_failure_category is FailureCategory.NO_PROGRESS
+    assert state.terminal_failure_category is FailureCategory.NO_PROGRESS
     assert len(state.progress_snapshots) == len(state.actions)
 
 
@@ -687,6 +697,9 @@ def test_failed_tests_mark_attempt_for_transactional_rollback(
     assert state.last_failed_attempt_id == 1
     assert state.last_failed_attempt_files == ["src/calculator.py"]
     assert state.last_failed_verification_tool is ToolName.RUN_TESTS
+    assert state.verification_failure_count == 1
+    assert state.failed_attempt_ids == [1]
+    assert state.last_failure_category is FailureCategory.TEST_VERIFICATION_FAILED
 
 
 def test_policy_action_is_blocked_while_runtime_rollback_is_pending(
@@ -755,3 +768,30 @@ def test_transactional_rollback_preserves_earlier_accepted_changes(
         "src/calculator.py",
         "src/helpers.py",
     ]
+
+
+def test_rejected_patch_is_counted_and_categorized(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+    protected_patch = (
+        "diff --git a/tests/test_calculator.py b/tests/test_calculator.py\n"
+        "--- a/tests/test_calculator.py\n"
+        "+++ b/tests/test_calculator.py\n"
+        "@@ -1,4 +1,4 @@\n"
+        " from src.calculator import add\n"
+        " \n"
+        " def test_add() -> None:\n"
+        "-    assert add(2, 3) == 5\n"
+        "+    assert add(2, 3) == -1\n"
+    )
+
+    result = executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": protected_patch}),
+    )
+
+    assert result.status is ObservationStatus.REJECTED
+    assert state.patch_rejection_count == 1
+    assert state.patch_application_failure_count == 0
+    assert state.last_failure_category is FailureCategory.PATCH_REJECTED

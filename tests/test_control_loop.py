@@ -1,7 +1,12 @@
-from patchpilot.agent import AgentControlLoop, AgentDecision
+from patchpilot.agent import (
+    AgentControlLoop,
+    AgentDecision,
+    PolicyResponseError,
+)
 from patchpilot.schemas import (
     AgentState,
     AgentStatus,
+    FailureCategory,
     ObservationStatus,
     RepairTask,
     ToolAction,
@@ -76,6 +81,8 @@ def test_policy_failure_escalates_safely() -> None:
 
     assert result.status is AgentStatus.ESCALATED
     assert "RuntimeError" in str(result.final_message)
+    assert result.last_failure_category is FailureCategory.MODEL_ERROR
+    assert result.terminal_failure_category is FailureCategory.MODEL_ERROR
 
 
 class ReflectingPolicy:
@@ -223,3 +230,23 @@ def test_control_loop_rolls_back_failed_attempt_before_next_decision() -> None:
     assert result.status is AgentStatus.FAILED
     assert result.rollback_required is False
     assert result.last_rolled_back_attempt_id == 1
+
+
+class ParseFailingPolicy:
+    def decide(self, state: AgentState) -> AgentDecision:
+        del state
+        raise PolicyResponseError("invalid structured decision")
+
+
+def test_policy_parse_failure_has_normalized_category() -> None:
+    state = make_state()
+    loop = AgentControlLoop(
+        policy=ParseFailingPolicy(),
+        executor=SuccessExecutor(),
+    )
+
+    result = loop.run(state)
+
+    assert result.status is AgentStatus.ESCALATED
+    assert result.last_failure_category is FailureCategory.DECISION_PARSE_ERROR
+    assert result.terminal_failure_category is FailureCategory.DECISION_PARSE_ERROR

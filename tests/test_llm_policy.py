@@ -432,3 +432,23 @@ def test_runtime_attempt_rollback_reads_restored_attempt_file() -> None:
 
     assert decision.action.tool is ToolName.READ_FILE
     assert decision.action.arguments == {"relative_path": "src/calculator.py"}
+
+
+def test_scaffolded_model_call_accounting() -> None:
+    state = read_state()
+
+    decision = StructuredLLMPolicy(FakeModel(valid_diff())).decide(state)
+
+    assert decision.action.tool is ToolName.APPLY_PATCH
+    assert state.model_calls == 1
+    assert state.decision_parse_failures == 0
+
+
+def test_scaffolded_patch_parse_failures_are_counted() -> None:
+    state = read_state()
+
+    with pytest.raises(PolicyResponseError):
+        StructuredLLMPolicy(FakeModel("not a source replacement")).decide(state)
+
+    assert state.model_calls == 2
+    assert state.decision_parse_failures == 2

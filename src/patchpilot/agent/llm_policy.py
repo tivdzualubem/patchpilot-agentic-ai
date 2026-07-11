@@ -278,6 +278,7 @@ class StructuredLLMPolicy:
             "No diff markers, no markdown, no explanation."
         )
 
+        state.model_calls += 1
         raw_diff = self.model.generate(
             system_prompt,
             user_prompt,
@@ -286,6 +287,7 @@ class StructuredLLMPolicy:
         try:
             patch_text = self._extract_diff(raw_diff, path, content)
         except PolicyResponseError as first_error:
+            state.decision_parse_failures += 1
             retry_prompt = (
                 user_prompt
                 + "\n\nYour previous answer was not a valid source replacement "
@@ -293,6 +295,7 @@ class StructuredLLMPolicy:
                 f"function {target}. Previous invalid answer:\n"
                 f"{raw_diff[:500]}"
             )
+            state.model_calls += 1
             retry_diff = self.model.generate(
                 system_prompt,
                 retry_prompt,
@@ -301,6 +304,7 @@ class StructuredLLMPolicy:
             try:
                 patch_text = self._extract_diff(retry_diff, path, content)
             except PolicyResponseError as retry_error:
+                state.decision_parse_failures += 1
                 raise PolicyResponseError(
                     f"{retry_error} First invalid response: {raw_diff[:300]}",
                     raw_response=retry_diff,

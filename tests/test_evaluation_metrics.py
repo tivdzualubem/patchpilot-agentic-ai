@@ -8,6 +8,7 @@ from patchpilot.evaluation import (
 from patchpilot.schemas import (
     AgentState,
     AgentStatus,
+    FailureCategory,
     ObservationStatus,
     RepairTask,
     ToolAction,
@@ -57,6 +58,16 @@ def make_state() -> AgentState:
     state.usage.tool_calls = 8
     state.usage.patch_attempts = 2
     state.usage.elapsed_seconds = 2.5
+    state.model_calls = 3
+    state.decision_parse_failures = 1
+    state.patch_rejection_count = 1
+    state.patch_application_failure_count = 1
+    state.verification_failure_count = 2
+    state.failed_attempt_ids = [1, 2]
+    state.last_failed_attempt_id = 2
+    state.last_rolled_back_attempt_id = 2
+    state.last_failure_category = FailureCategory.TEST_VERIFICATION_FAILED
+    state.terminal_failure_category = None
 
     state.actions.extend(
         [
@@ -132,6 +143,17 @@ def test_collect_run_metrics_counts_agentic_behaviour() -> None:
     assert row.succeeded is True
     assert row.full_suite_passed is True
     assert row.policy_failure is False
+    assert row.model_calls == 3
+    assert row.decision_parse_failures == 1
+    assert row.patch_rejection_count == 1
+    assert row.patch_application_failure_count == 1
+    assert row.verification_failure_count == 2
+    assert row.failed_attempt_count == 2
+    assert row.failed_attempt_ids == "1;2"
+    assert row.last_failed_attempt_id == 2
+    assert row.last_rolled_back_attempt_id == 2
+    assert row.last_failure_category == FailureCategory.TEST_VERIFICATION_FAILED.value
+    assert row.terminal_failure_category is None
     assert row.invalid_patch_count == 1
     assert row.successful_patch_count == 1
     assert row.syntax_check_count == 1
@@ -180,6 +202,14 @@ def test_summarise_runs_computes_agentic_rates_and_means() -> None:
     assert summary.reflection_rate == 1.0
     assert summary.syntax_error_rate == 0.0
     assert summary.policy_failures == 0
+    assert summary.decision_parse_failure_runs == 1
+    assert summary.patch_rejection_runs == 1
+    assert summary.verification_failure_runs == 1
+    assert summary.mean_model_calls == 3.0
+    assert summary.mean_decision_parse_failures == 1.0
+    assert summary.mean_patch_rejections == 1.0
+    assert summary.mean_verification_failures == 2.0
+    assert summary.mean_failed_attempts == 2.0
     assert summary.mean_successful_patches == 1.0
     assert summary.mean_syntax_checks == 1.0
     assert summary.mean_targeted_tests == 1.0

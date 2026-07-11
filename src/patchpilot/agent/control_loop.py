@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from patchpilot.agent.executor import AgentToolExecutor
+from patchpilot.agent.llm_policy import PolicyResponseError
 from patchpilot.agent.policy import AgentPolicy
 from patchpilot.agent.tracing import TraceRecorder
-from patchpilot.schemas import AgentState, AgentStatus
+from patchpilot.schemas import AgentState, AgentStatus, FailureCategory
 
 
 class AgentControlLoop:
@@ -49,6 +50,13 @@ class AgentControlLoop:
                 decision = self.policy.decide(state)
             except Exception as exc:
                 state.status = AgentStatus.ESCALATED
+                category = (
+                    FailureCategory.DECISION_PARSE_ERROR
+                    if isinstance(exc, PolicyResponseError)
+                    else FailureCategory.MODEL_ERROR
+                )
+                state.last_failure_category = category
+                state.terminal_failure_category = category
                 detail = str(exc).strip()
                 raw_response = getattr(exc, "raw_response", None)
                 if raw_response:
@@ -98,6 +106,8 @@ class AgentControlLoop:
             AgentStatus.ESCALATED,
         }:
             state.status = AgentStatus.BUDGET_EXHAUSTED
+            state.last_failure_category = FailureCategory.BUDGET_EXHAUSTED
+            state.terminal_failure_category = FailureCategory.BUDGET_EXHAUSTED
             state.final_message = "The configured execution budget was exhausted."
             self._checkpoint(state, run_id, metadata)
 
