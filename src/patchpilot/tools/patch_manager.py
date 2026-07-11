@@ -18,7 +18,8 @@ from patchpilot.schemas import (
 from patchpilot.tools.repository import RepositorySandbox
 
 _MAX_PATCH_BYTES = 50_000
-_MAX_PATCH_FILES = 5
+_MAX_PATCH_FILES = 2
+_MAX_CHANGED_LINES = 20
 _GIT_TIMEOUT_SECONDS = 15
 
 _BLOCKED_PARTS = {
@@ -55,6 +56,7 @@ class PatchManager:
         task: RepairTask,
         max_patch_bytes: int = _MAX_PATCH_BYTES,
         max_patch_files: int = _MAX_PATCH_FILES,
+        max_changed_lines: int = _MAX_CHANGED_LINES,
     ) -> None:
         if shutil.which("git") is None:
             raise PatchPolicyError(
@@ -62,24 +64,22 @@ class PatchManager:
             )
 
         if not 1_000 <= max_patch_bytes <= 1_000_000:
-            raise PatchPolicyError(
-                "max_patch_bytes must be between 1000 and 1000000."
-            )
+            raise PatchPolicyError("max_patch_bytes must be between 1000 and 1000000.")
 
         if not 1 <= max_patch_files <= 25:
-            raise PatchPolicyError(
-                "max_patch_files must be between 1 and 25."
-            )
+            raise PatchPolicyError("max_patch_files must be between 1 and 25.")
+
+        if not 1 <= max_changed_lines <= 1_000:
+            raise PatchPolicyError("max_changed_lines must be between 1 and 1000.")
 
         self.repository_root = sandbox.repository_root
-        self.allowed_paths = tuple(
-            PurePosixPath(path) for path in task.allowed_paths
-        )
+        self.allowed_paths = tuple(PurePosixPath(path) for path in task.allowed_paths)
         self.forbidden_paths = tuple(
             PurePosixPath(path) for path in task.forbidden_paths
         )
         self.max_patch_bytes = max_patch_bytes
         self.max_patch_files = max_patch_files
+        self.max_changed_lines = max_changed_lines
 
         self._original_files: dict[str, bytes] = {}
         self._changed_files: set[str] = set()
@@ -112,86 +112,62 @@ class PatchManager:
         path = PurePosixPath(raw_path)
 
         if ".." in path.parts:
-            raise PatchPolicyError(
-                "Patch paths cannot contain parent traversal."
-            )
+            raise PatchPolicyError("Patch paths cannot contain parent traversal.")
 
         if any(part in _BLOCKED_PARTS for part in path.parts):
-            raise PatchPolicyError(
-                "Patch path targets a blocked repository area."
-            )
+            raise PatchPolicyError("Patch path targets a blocked repository area.")
 
-        if any(
-            part == ".env" or part.startswith(".env.")
-            for part in path.parts
-        ):
-            raise PatchPolicyError(
-                "Environment and secret files cannot be modified."
-            )
+        if any(part == ".env" or part.startswith(".env.") for part in path.parts):
+            raise PatchPolicyError("Environment and secret files cannot be modified.")
 
-        if not any(
-            self._within(path, allowed)
-            for allowed in self.allowed_paths
-        ):
-            raise PatchPolicyError(
-                f"Patch path is outside allowed paths: {raw_path}"
-            )
+        if not any(self._within(path, allowed) for allowed in self.allowed_paths):
+            raise PatchPolicyError(f"Patch path is outside allowed paths: {raw_path}")
 
-        if any(
-            self._within(path, forbidden)
-            for forbidden in self.forbidden_paths
-        ):
-            raise PatchPolicyError(
-                f"Patch path is forbidden: {raw_path}"
-            )
+        if any(self._within(path, forbidden) for forbidden in self.forbidden_paths):
+            raise PatchPolicyError(f"Patch path is forbidden: {raw_path}")
 
         candidate = self.repository_root / Path(*path.parts)
 
         if candidate.is_symlink():
-            raise PatchPolicyError(
-                "Symbolic-link patch targets are not permitted."
-            )
+            raise PatchPolicyError("Symbolic-link patch targets are not permitted.")
 
         try:
             resolved = candidate.resolve(strict=True)
         except FileNotFoundError as exc:
-            raise PatchPolicyError(
-                "Patches may modify existing files only."
-            ) from exc
+            raise PatchPolicyError("Patches may modify existing files only.") from exc
 
         if not resolved.is_relative_to(self.repository_root):
-            raise PatchPolicyError(
-                "Patch target escapes the repository sandbox."
-            )
+            raise PatchPolicyError("Patch target escapes the repository sandbox.")
 
         if not resolved.is_file():
-            raise PatchPolicyError(
-                "Patch target must be a regular file."
-            )
+            raise PatchPolicyError("Patch target must be a regular file.")
 
         raw = resolved.read_bytes()
 
         if b"\x00" in raw:
-            raise PatchPolicyError(
-                "Binary files cannot be modified."
-            )
+            raise PatchPolicyError("Binary files cannot be modified.")
 
         try:
             raw.decode("utf-8")
         except UnicodeDecodeError as exc:
-            raise PatchPolicyError(
-                "Only UTF-8 source files can be modified."
-            ) from exc
+            raise PatchPolicyError("Only UTF-8 source files can be modified.") from exc
 
         return path.as_posix()
+
+    @staticmethod
+    def _count_changed_lines(patch_text: str) -> int:
+        """Count added and removed content lines in a unified diff."""
+        return sum(
+            1
+            for line in patch_text.splitlines()
+            if (line.startswith(("+", "-")) and not line.startswith(("+++", "---")))
+        )
 
     @staticmethod
     def _remove_git_prefix(raw_path: str) -> str:
         """Remove the required a/ or b/ unified-diff prefix."""
         if not raw_path.startswith(("a/", "b/")):
-            raise PatchPolicyError(
-                "Unified-diff paths must use a/ and b/ prefixes."
-            )
+            raise PatchPolicyError("Unified-diff paths must use a/ and b/ prefixes.")
 
         return raw_path[2:]
 
@@ -206,14 +182,10 @@ class PatchManager:
             raise PatchPolicyError("Patch content cannot be empty.")
 
         if len(encoded) > self.max_patch_bytes:
-            raise PatchPolicyError(
-                "Patch exceeds the configured size limit."
-            )
+            raise PatchPolicyError("Patch exceeds the configured size limit.")
 
         if "\x00" in patch_text:
-            raise PatchPolicyError(
-                "Patch content contains a null byte."
-            )
+            raise PatchPolicyError("Patch content contains a null byte.")
 
         for marker in _UNSUPPORTED_PATCH_MARKERS:
             if marker in patch_text:
@@ -221,6 +193,13 @@ class PatchManager:
                     "File creation, deletion, rename, copy, and binary "
                     "patches are not permitted."
                 )
+
+        changed_lines = self._count_changed_lines(patch_text)
+        if changed_lines > self.max_changed_lines:
+            raise PatchPolicyError(
+                "Patch changes more lines than the configured limit: "
+                f"{changed_lines} > {self.max_changed_lines}."
+            )
 
         declared: list[str] = []
         header_paths: list[str] = []
@@ -230,17 +209,13 @@ class PatchManager:
                 fields = line.split()
 
                 if len(fields) != 4:
-                    raise PatchPolicyError(
-                        "Malformed diff --git declaration."
-                    )
+                    raise PatchPolicyError("Malformed diff --git declaration.")
 
                 old_path = self._remove_git_prefix(fields[2])
                 new_path = self._remove_git_prefix(fields[3])
 
                 if old_path != new_path:
-                    raise PatchPolicyError(
-                        "Renaming files is not permitted."
-                    )
+                    raise PatchPolicyError("Renaming files is not permitted.")
 
                 declared.append(self._validate_path(old_path))
 
@@ -253,9 +228,7 @@ class PatchManager:
                     )
 
                 header_path = self._remove_git_prefix(fields[1])
-                header_paths.append(
-                    self._validate_path(header_path)
-                )
+                header_paths.append(self._validate_path(header_path))
 
         unique_paths = tuple(dict.fromkeys(declared))
 
@@ -270,9 +243,7 @@ class PatchManager:
             )
 
         if not header_paths:
-            raise PatchPolicyError(
-                "Patch is missing unified-diff file headers."
-            )
+            raise PatchPolicyError("Patch is missing unified-diff file headers.")
 
         undeclared = set(header_paths) - set(unique_paths)
 
@@ -358,8 +329,7 @@ class PatchManager:
                 )
 
             snapshots = {
-                path: (self.repository_root / path).read_bytes()
-                for path in paths
+                path: (self.repository_root / path).read_bytes() for path in paths
             }
 
             result = self._run_git_apply(
@@ -417,9 +387,7 @@ class PatchManager:
 
         for path in sorted(self._changed_files):
             original = self._original_files[path].decode("utf-8")
-            current = (
-                self.repository_root / path
-            ).read_text(encoding="utf-8")
+            current = (self.repository_root / path).read_text(encoding="utf-8")
 
             sections.extend(
                 difflib.unified_diff(
@@ -436,10 +404,7 @@ class PatchManager:
         return self._observation(
             ToolName.VIEW_DIFF,
             ObservationStatus.OK,
-            (
-                f"Generated diff for {len(self._changed_files)} "
-                "changed file(s)."
-            ),
+            (f"Generated diff for {len(self._changed_files)} changed file(s)."),
             started_at,
             output,
         )
@@ -459,9 +424,7 @@ class PatchManager:
                     started_at,
                 )
 
-            (self.repository_root / path).write_bytes(
-                self._original_files[path]
-            )
+            (self.repository_root / path).write_bytes(self._original_files[path])
             self._changed_files.discard(path)
             self._original_files.pop(path)
 
@@ -485,9 +448,7 @@ class PatchManager:
         restored = sorted(self._original_files)
 
         for path in restored:
-            (self.repository_root / path).write_bytes(
-                self._original_files[path]
-            )
+            (self.repository_root / path).write_bytes(self._original_files[path])
 
         self._original_files.clear()
         self._changed_files.clear()

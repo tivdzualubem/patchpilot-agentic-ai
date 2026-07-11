@@ -19,14 +19,12 @@ def patch_environment(
 
     source = repository / "src" / "calculator.py"
     source.write_text(
-        "def add(left: int, right: int) -> int:\n"
-        "    return left - right\n",
+        "def add(left: int, right: int) -> int:\n    return left - right\n",
         encoding="utf-8",
     )
 
     (repository / "tests" / "test_calculator.py").write_text(
-        "def test_add() -> None:\n"
-        "    assert True\n",
+        "def test_add() -> None:\n    assert True\n",
         encoding="utf-8",
     )
 
@@ -173,13 +171,17 @@ def test_restore_all_reverts_multiple_patch_attempts(
     source, manager = patch_environment
     manager.apply_patch(valid_patch())
 
-    second_patch = valid_patch().replace(
-        "left - right",
-        "left + right",
-    ).replace(
-        "left + right\n",
-        "left * right\n",
-        1,
+    second_patch = (
+        valid_patch()
+        .replace(
+            "left - right",
+            "left + right",
+        )
+        .replace(
+            "left + right\n",
+            "left * right\n",
+            1,
+        )
     )
     manager.apply_patch(second_patch)
 
@@ -188,3 +190,79 @@ def test_restore_all_reverts_multiple_patch_attempts(
     assert result.status is ObservationStatus.OK
     assert "return left - right" in source.read_text()
     assert manager.changed_files == ()
+
+
+def multiline_patch() -> str:
+    """Return a valid bounded multi-line calculator repair."""
+    return (
+        "diff --git a/src/calculator.py b/src/calculator.py\n"
+        "--- a/src/calculator.py\n"
+        "+++ b/src/calculator.py\n"
+        "@@ -1,2 +1,3 @@\n"
+        " def add(left: int, right: int) -> int:\n"
+        '+    """Return the arithmetic sum."""\n'
+        "-    return left - right\n"
+        "+    return left + right\n"
+    )
+
+
+def test_bounded_multiline_patch_is_applied(
+    patch_environment: tuple[Path, PatchManager],
+) -> None:
+    source, manager = patch_environment
+
+    result = manager.apply_patch(multiline_patch())
+
+    assert result.status is ObservationStatus.OK
+    content = source.read_text(encoding="utf-8")
+    assert '"""Return the arithmetic sum."""' in content
+    assert "return left + right" in content
+
+
+def test_patch_exceeding_changed_line_limit_is_rejected(
+    patch_environment: tuple[Path, PatchManager],
+) -> None:
+    source, manager = patch_environment
+    removed = "".join(f"-old_{index}\n" for index in range(11))
+    added = "".join(f"+new_{index}\n" for index in range(11))
+    patch = (
+        "diff --git a/src/calculator.py b/src/calculator.py\n"
+        "--- a/src/calculator.py\n"
+        "+++ b/src/calculator.py\n"
+        "@@ -1,11 +1,11 @@\n"
+        f"{removed}{added}"
+    )
+    original = source.read_text(encoding="utf-8")
+
+    result = manager.apply_patch(patch)
+
+    assert result.status is ObservationStatus.REJECTED
+    assert "configured limit" in result.summary
+    assert "22 > 20" in result.summary
+    assert source.read_text(encoding="utf-8") == original
+
+
+def test_patch_modifying_more_than_two_files_is_rejected(
+    patch_environment: tuple[Path, PatchManager],
+) -> None:
+    source, manager = patch_environment
+    source_root = source.parent
+
+    for name in ("one.py", "two.py", "three.py"):
+        (source_root / name).write_text("value = 1\n", encoding="utf-8")
+
+    sections = []
+    for name in ("one.py", "two.py", "three.py"):
+        sections.append(
+            f"diff --git a/src/{name} b/src/{name}\n"
+            f"--- a/src/{name}\n"
+            f"+++ b/src/{name}\n"
+            "@@ -1 +1 @@\n"
+            "-value = 1\n"
+            "+value = 2\n"
+        )
+
+    result = manager.apply_patch("".join(sections))
+
+    assert result.status is ObservationStatus.REJECTED
+    assert "more files than the configured limit" in result.summary

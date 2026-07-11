@@ -59,8 +59,10 @@ class LLMToolPolicy:
         "apply_patch": {
             "arguments": {"patch_text": "required unified diff"},
             "purpose": (
-                "Apply a minimal source-only patch. Never modify protected tests, "
-                "create files, delete files, rename files, or use absolute paths."
+                "Apply a minimal source-only unified diff affecting at most "
+                "2 existing files and 20 added/removed lines. Never modify "
+                "protected tests, create files, delete files, rename files, "
+                "or use absolute paths."
             ),
         },
         "view_diff": {
