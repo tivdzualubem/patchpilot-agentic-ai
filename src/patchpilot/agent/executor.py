@@ -144,6 +144,14 @@ class AgentToolExecutor:
         state.full_suite_passed = False
         state.verified_revision = None
 
+    @staticmethod
+    def _update_syntax_gate(state: AgentState) -> None:
+        """Require fresh syntax evidence for the current changed Python files."""
+        if any(Path(path).suffix == ".py" for path in state.changed_files):
+            state.syntax_verified_revision = None
+        else:
+            state.syntax_verified_revision = state.repository_revision
+
     def _reject(
         self,
         state: AgentState,
@@ -177,6 +185,14 @@ class AgentToolExecutor:
             )
 
         if arguments.status == "succeeded":
+            if state.syntax_check_required:
+                return self._reject(
+                    state,
+                    action,
+                    "Success requires a passing syntax check for the current "
+                    "repository revision.",
+                )
+
             verified = (
                 state.full_suite_passed
                 and state.verified_revision == state.repository_revision
@@ -349,6 +365,17 @@ class AgentToolExecutor:
         if action.tool is ToolName.APPLY_PATCH:
             state.usage.patch_attempts += 1
 
+        if state.syntax_check_required and action.tool in {
+            ToolName.APPLY_PATCH,
+            ToolName.RUN_TESTS,
+        }:
+            return self._reject(
+                state,
+                action,
+                "A passing syntax check is required for the current repository "
+                "revision before tests or another patch.",
+            )
+
         no_progress_reason = self.repeated_action_guard.rejection_reason(
             state,
             action,
@@ -390,6 +417,13 @@ class AgentToolExecutor:
             state.repository_revision += 1
             state.changed_files = list(self.patch_manager.changed_files)
             self._invalidate_verification(state)
+            self._update_syntax_gate(state)
+
+        elif action.tool is ToolName.CHECK_SYNTAX:
+            if observation.status is ObservationStatus.OK:
+                state.syntax_verified_revision = state.repository_revision
+            else:
+                state.syntax_verified_revision = None
 
         elif action.tool is ToolName.RUN_TESTS:
             if test_target is None and observation.status is ObservationStatus.OK:

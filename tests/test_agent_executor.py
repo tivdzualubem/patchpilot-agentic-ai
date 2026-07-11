@@ -125,6 +125,8 @@ def test_patch_updates_revision_and_invalidates_verification(
 
     assert result.status is ObservationStatus.OK
     assert state.repository_revision == 1
+    assert state.syntax_check_required is True
+    assert state.syntax_verified_revision is None
     assert state.full_suite_passed is False
     assert state.verified_revision is None
     assert state.changed_files == ["src/calculator.py"]
@@ -162,6 +164,10 @@ def test_targeted_test_does_not_authorize_success(
         ),
     )
 
+    syntax = executor.execute(
+        state,
+        action(ToolName.CHECK_SYNTAX),
+    )
     test_result = executor.execute(
         state,
         action(
@@ -180,6 +186,7 @@ def test_targeted_test_does_not_authorize_success(
         ),
     )
 
+    assert syntax.status is ObservationStatus.OK
     assert test_result.status is ObservationStatus.OK
     assert finish_result.status is ObservationStatus.REJECTED
 
@@ -196,6 +203,10 @@ def test_verified_current_revision_can_finish_successfully(
             {"patch_text": repair_patch()},
         ),
     )
+    syntax = executor.execute(
+        state,
+        action(ToolName.CHECK_SYNTAX),
+    )
     tests = executor.execute(
         state,
         action(ToolName.RUN_TESTS),
@@ -211,6 +222,8 @@ def test_verified_current_revision_can_finish_successfully(
         ),
     )
 
+    assert syntax.status is ObservationStatus.OK
+    assert state.syntax_verified_revision == 1
     assert tests.status is ObservationStatus.OK
     assert state.verified_revision == 1
     assert finished.status is ObservationStatus.OK
@@ -241,12 +254,17 @@ def test_patch_limit_still_allows_verification(
             {"patch_text": repair_patch()},
         ),
     )
+    syntax = executor.execute(
+        state,
+        action(ToolName.CHECK_SYNTAX),
+    )
     verification = executor.execute(
         state,
         action(ToolName.RUN_TESTS),
     )
 
     assert blocked_patch.status is ObservationStatus.REJECTED
+    assert syntax.status is ObservationStatus.OK
     assert verification.status is ObservationStatus.OK
     assert state.full_suite_passed is True
 
@@ -262,6 +280,10 @@ def test_repository_mutation_after_verification_blocks_success(
             ToolName.APPLY_PATCH,
             {"patch_text": repair_patch()},
         ),
+    )
+    executor.execute(
+        state,
+        action(ToolName.CHECK_SYNTAX),
     )
     executor.execute(
         state,
@@ -404,7 +426,7 @@ def test_different_action_resets_repeated_action_sequence(
     assert repeated_after_reset.status is ObservationStatus.OK
 
 
-def test_run_tests_after_successful_patch_is_allowed(
+def test_run_tests_requires_current_syntax_verification(
     executor_state: tuple[AgentToolExecutor, AgentState],
 ) -> None:
     executor, state = executor_state
@@ -414,10 +436,15 @@ def test_run_tests_after_successful_patch_is_allowed(
         state,
         action(ToolName.APPLY_PATCH, {"patch_text": repair_patch()}),
     )
+    blocked_tests = executor.execute(state, action(ToolName.RUN_TESTS))
+    syntax = executor.execute(state, action(ToolName.CHECK_SYNTAX))
     verification = executor.execute(state, action(ToolName.RUN_TESTS))
 
     assert initial_tests.status is ObservationStatus.ERROR
     assert patch.status is ObservationStatus.OK
+    assert blocked_tests.status is ObservationStatus.REJECTED
+    assert "syntax check is required" in blocked_tests.summary
+    assert syntax.status is ObservationStatus.OK
     assert verification.status is ObservationStatus.OK
 
 
@@ -467,6 +494,8 @@ def test_syntax_check_passes_after_valid_patch(
 
     assert result.status is ObservationStatus.OK
     assert result.output == "src/calculator.py"
+    assert state.syntax_verified_revision == state.repository_revision
+    assert state.syntax_check_required is False
 
 
 def test_syntax_check_reports_invalid_changed_source(
@@ -488,6 +517,8 @@ def test_syntax_check_reports_invalid_changed_source(
 
     assert result.status is ObservationStatus.ERROR
     assert "src/calculator.py:2:" in result.output
+    assert state.syntax_verified_revision is None
+    assert state.syntax_check_required is True
 
 
 def test_syntax_check_rejects_unexpected_arguments(
@@ -534,3 +565,74 @@ def test_repeated_action_cycle_is_rejected_and_escalated(
     assert state.final_message is not None
     assert "no-progress" in state.final_message
     assert len(state.progress_snapshots) == len(state.actions)
+
+
+def test_second_patch_is_blocked_until_syntax_passes(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+
+    first_patch = executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": repair_patch()}),
+    )
+    second_patch = executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": repair_patch()}),
+    )
+
+    assert first_patch.status is ObservationStatus.OK
+    assert second_patch.status is ObservationStatus.REJECTED
+    assert "syntax check is required" in second_patch.summary
+    assert state.repository_revision == 1
+
+
+def test_success_is_blocked_while_syntax_check_is_pending(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+    executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": repair_patch()}),
+    )
+    state.full_suite_passed = True
+    state.verified_revision = state.repository_revision
+
+    result = executor.execute(
+        state,
+        action(
+            ToolName.FINISH,
+            {
+                "status": "succeeded",
+                "message": "Attempting success without syntax evidence.",
+            },
+        ),
+    )
+
+    assert result.status is ObservationStatus.REJECTED
+    assert "passing syntax check" in result.summary
+    assert state.status is AgentStatus.RUNNING
+
+
+def test_restore_clears_syntax_gate_when_no_changes_remain(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+    executor.execute(
+        state,
+        action(ToolName.APPLY_PATCH, {"patch_text": invalid_syntax_patch()}),
+    )
+    executor.execute(state, action(ToolName.CHECK_SYNTAX))
+
+    restored = executor.execute(
+        state,
+        action(
+            ToolName.RESTORE_FILE,
+            {"relative_path": "src/calculator.py"},
+        ),
+    )
+
+    assert restored.status is ObservationStatus.OK
+    assert state.changed_files == []
+    assert state.syntax_check_required is False
+    assert state.syntax_verified_revision == state.repository_revision

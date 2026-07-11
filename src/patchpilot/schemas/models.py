@@ -169,6 +169,7 @@ class ProgressSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     repository_revision: int = Field(ge=0)
+    syntax_verified_revision: int | None = Field(default=None, ge=0)
     latest_test_evidence_hash: str | None = Field(
         default=None,
         pattern=r"^[0-9a-f]{64}$",
@@ -201,10 +202,22 @@ class AgentState(BaseModel):
     no_progress_streak: int = Field(default=0, ge=0)
 
     repository_revision: int = Field(default=0, ge=0)
+    syntax_verified_revision: int | None = Field(default=None, ge=0)
     verified_revision: int | None = Field(default=None, ge=0)
     full_suite_passed: bool = False
 
     final_message: str | None = None
+
+    @property
+    def syntax_check_required(self) -> bool:
+        """Return whether changed Python files need current syntax evidence."""
+        has_changed_python = any(
+            PurePosixPath(path).suffix == ".py" for path in self.changed_files
+        )
+        return (
+            has_changed_python
+            and self.syntax_verified_revision != self.repository_revision
+        )
 
     @property
     def can_continue(self) -> bool:

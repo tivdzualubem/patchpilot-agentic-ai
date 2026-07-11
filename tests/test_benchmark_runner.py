@@ -30,6 +30,10 @@ class RepairPolicy:
                 rationale="Replace subtraction with addition.",
             ),
             ToolAction(
+                tool=ToolName.CHECK_SYNTAX,
+                rationale="Validate changed Python syntax.",
+            ),
+            ToolAction(
                 tool=ToolName.RUN_TESTS,
                 rationale="Verify the repaired repository.",
             ),
@@ -74,6 +78,7 @@ def test_complete_benchmark_repair(tmp_path: Path) -> None:
     repaired = run.prepared.repository_root / "src/calculator.py"
 
     assert run.state.status is AgentStatus.SUCCEEDED
+    assert run.state.syntax_verified_revision == run.state.repository_revision
     assert run.state.full_suite_passed is True
     assert "left + right" in repaired.read_text(encoding="utf-8")
     assert run.trace_path.is_file()

@@ -405,11 +405,29 @@ class StructuredLLMPolicy:
             and last_observation.status is ObservationStatus.OK
         ):
             return self._make_decision(
-                summary="Run the full test suite after applying a patch.",
-                plan="Verify the patched repository.",
-                tool=ToolName.RUN_TESTS,
-                rationale="Verify the current source revision.",
+                summary="Check Python syntax immediately after applying a patch.",
+                plan="Validate changed Python files before test execution.",
+                tool=ToolName.CHECK_SYNTAX,
+                rationale="Establish syntax evidence for the current revision.",
             )
+
+        if last_action.tool is ToolName.CHECK_SYNTAX:
+            if last_observation.status is ObservationStatus.OK:
+                return self._make_decision(
+                    summary="Run the full test suite after syntax validation.",
+                    plan="Verify the syntax-checked repository.",
+                    tool=ToolName.RUN_TESTS,
+                    rationale="Verify the current source revision.",
+                )
+
+            if state.changed_files:
+                return self._make_decision(
+                    summary="Restore source after failed syntax validation.",
+                    plan="Rollback the invalid patch before another repair attempt.",
+                    tool=ToolName.RESTORE_FILE,
+                    arguments={"relative_path": state.changed_files[0]},
+                    rationale="Do not test or extend a syntactically invalid patch.",
+                )
 
         raise PolicyResponseError(
             f"No staged policy transition for {last_action.tool.value}/"

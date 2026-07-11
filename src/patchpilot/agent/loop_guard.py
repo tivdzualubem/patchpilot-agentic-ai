@@ -71,6 +71,7 @@ class RepeatedActionGuard:
         """Build the evidence used to determine whether progress occurred."""
         return ProgressSnapshot(
             repository_revision=state.repository_revision,
+            syntax_verified_revision=state.syntax_verified_revision,
             latest_test_evidence_hash=cls._latest_test_evidence_hash(state),
             current_hypothesis=state.current_hypothesis,
             changed_files=tuple(sorted(state.changed_files)),

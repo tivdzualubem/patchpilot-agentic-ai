@@ -52,8 +52,9 @@ class LLMToolPolicy:
         "check_syntax": {
             "arguments": {},
             "purpose": (
-                "Parse all currently changed Python files and report syntax "
-                "errors before test execution."
+                "Parse all currently changed Python files. This must be the "
+                "verification step after every successful patch and before "
+                "tests or another patch."
             ),
         },
         "apply_patch": {
@@ -62,7 +63,8 @@ class LLMToolPolicy:
                 "Apply a minimal source-only unified diff affecting at most "
                 "2 existing files and 20 added/removed lines. Never modify "
                 "protected tests, create files, delete files, rename files, "
-                "or use absolute paths."
+                "or use absolute paths. Changed Python files require a "
+                "passing syntax check before tests or another patch."
             ),
         },
         "view_diff": {
@@ -112,8 +114,10 @@ class LLMToolPolicy:
             "repair agent. Choose exactly one next action from the restricted tool "
             "contract. The runtime, not you, validates and executes the action. "
             "Never edit tests or forbidden paths. Prefer evidence-gathering before "
-            "patching. Use a minimal unified diff for apply_patch. Do not report "
-            "success until a full test run has passed for the current revision. "
+            "patching. Use a minimal unified diff for apply_patch. After every "
+            "successful patch, choose check_syntax before tests or another patch. "
+            "Do not report success until a full test run has passed for the current "
+            "revision. "
             "The reflection field must be null because this policy is the "
             "no-reflection ablation. Return only one JSON object matching the "
             "provided schema. Do not use markdown.\n\n"
@@ -187,6 +191,8 @@ class LLMToolPolicy:
             "rejected_hypotheses": state.rejected_hypotheses[-5:],
             "changed_files": state.changed_files,
             "repository_revision": state.repository_revision,
+            "syntax_verified_revision": state.syntax_verified_revision,
+            "syntax_check_required": state.syntax_check_required,
             "verified_revision": state.verified_revision,
             "full_suite_passed": state.full_suite_passed,
         }

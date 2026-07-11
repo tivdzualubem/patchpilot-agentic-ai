@@ -168,7 +168,7 @@ def test_read_file_generates_diff_only_patch_decision() -> None:
     assert "return left + right" in decision.action.arguments["patch_text"]
 
 
-def test_apply_patch_success_forces_verification() -> None:
+def test_apply_patch_success_forces_syntax_check() -> None:
     state = read_state()
     state.actions.append(
         ToolAction(
@@ -188,7 +188,58 @@ def test_apply_patch_success_forces_verification() -> None:
 
     decision = policy.decide(state)
 
+    assert decision.action.tool is ToolName.CHECK_SYNTAX
+
+
+def test_successful_syntax_check_forces_test_verification() -> None:
+    state = read_state()
+    state.changed_files.append("src/calculator.py")
+    state.repository_revision = 1
+    state.syntax_verified_revision = 1
+    state.actions.append(
+        ToolAction(
+            tool=ToolName.CHECK_SYNTAX,
+            arguments={},
+            rationale="Check syntax.",
+        )
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.CHECK_SYNTAX,
+            status=ObservationStatus.OK,
+            summary="Syntax passed.",
+        )
+    )
+
+    decision = StructuredLLMPolicy(NoCallModel()).decide(state)
+
     assert decision.action.tool is ToolName.RUN_TESTS
+
+
+def test_failed_syntax_check_restores_changed_file() -> None:
+    state = read_state()
+    state.changed_files.append("src/calculator.py")
+    state.repository_revision = 1
+    state.actions.append(
+        ToolAction(
+            tool=ToolName.CHECK_SYNTAX,
+            arguments={},
+            rationale="Check syntax.",
+        )
+    )
+    state.observations.append(
+        ToolObservation(
+            tool=ToolName.CHECK_SYNTAX,
+            status=ObservationStatus.ERROR,
+            summary="Syntax failed.",
+            output="src/calculator.py:5:12: invalid syntax",
+        )
+    )
+
+    decision = StructuredLLMPolicy(NoCallModel()).decide(state)
+
+    assert decision.action.tool is ToolName.RESTORE_FILE
+    assert decision.action.arguments == {"relative_path": "src/calculator.py"}
 
 
 def test_invalid_diff_fails_safely() -> None:

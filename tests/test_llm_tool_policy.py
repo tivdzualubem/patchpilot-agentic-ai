@@ -115,8 +115,10 @@ def test_model_selects_first_tool_and_receives_decision_schema() -> None:
     assert "properties" in model.response_schemas[0]
     assert "list_files" in model.system_prompts[0]
     assert "check_syntax" in model.system_prompts[0]
+    assert "After every successful patch" in model.system_prompts[0]
     assert "tool-agent-001" in model.user_prompts[0]
     assert '"allowed_paths": [' in model.user_prompts[0]
+    assert '"syntax_check_required": false' in model.user_prompts[0]
 
 
 def test_recent_failure_evidence_is_included_in_prompt() -> None:
@@ -228,3 +230,23 @@ def test_invalid_parse_attempt_limit_is_rejected(attempts: int) -> None:
             ScriptedModel([decision_json()]),
             max_parse_attempts=attempts,
         )
+
+
+def test_pending_syntax_gate_is_exposed_to_model() -> None:
+    state = AgentState(task=make_task())
+    state.changed_files = ["src/calculator.py"]
+    state.repository_revision = 1
+    model = ScriptedModel(
+        [
+            decision_json(
+                tool="check_syntax",
+                arguments={},
+            )
+        ]
+    )
+
+    decision = LLMToolPolicy(model).decide(state)
+
+    assert decision.action.tool is ToolName.CHECK_SYNTAX
+    assert '"syntax_check_required": true' in model.user_prompts[0]
+    assert '"syntax_verified_revision": null' in model.user_prompts[0]

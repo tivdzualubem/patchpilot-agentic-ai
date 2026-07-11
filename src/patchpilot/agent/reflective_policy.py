@@ -27,7 +27,11 @@ class ReflectiveLLMToolPolicy(LLMToolPolicy):
 
         return (
             bool(state.changed_files)
-            and last_action.tool is ToolName.RUN_TESTS
+            and last_action.tool
+            in {
+                ToolName.CHECK_SYNTAX,
+                ToolName.RUN_TESTS,
+            }
             and last_observation.status is not ObservationStatus.OK
         )
 
@@ -45,8 +49,10 @@ class ReflectiveLLMToolPolicy(LLMToolPolicy):
             "Never edit tests or forbidden paths. Prefer evidence-gathering "
             "before patching. Use a minimal unified diff for apply_patch. Do "
             "not report success until a full test run has passed for the current "
-            "revision. Normally set reflection to null. After failed post-patch "
-            "verification, provide a concise critique of the previous hypothesis "
+            "revision. Run check_syntax after every successful patch and before "
+            "tests or another patch. Normally set reflection to null. After failed "
+            "post-patch verification, provide a concise critique of the previous "
+            "hypothesis "
             "and a revised hypothesis before continuing. Return only one JSON "
             "object matching the provided schema. Do not use markdown.\n\n"
             f"RESTRICTED TOOL CONTRACT:\n{tool_contract}"

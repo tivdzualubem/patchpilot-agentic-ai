@@ -186,3 +186,31 @@ def test_progress_resets_no_progress_streak() -> None:
     )
 
     assert state.no_progress_streak == 0
+
+
+def test_syntax_verification_resets_no_progress_streak() -> None:
+    guard = RepeatedActionGuard()
+    state = make_state()
+    state.changed_files = ["src/example.py"]
+    state.repository_revision = 1
+    record_action(
+        guard,
+        state,
+        make_action(
+            ToolName.READ_FILE,
+            {"relative_path": "src/example.py"},
+        ),
+    )
+
+    state.no_progress_streak = 1
+    state.syntax_verified_revision = 1
+    record_action(
+        guard,
+        state,
+        make_action(
+            ToolName.SEARCH_CODE,
+            {"query": "return"},
+        ),
+    )
+
+    assert state.no_progress_streak == 0

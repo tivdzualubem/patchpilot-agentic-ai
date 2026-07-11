@@ -114,6 +114,43 @@ def failed_verification_state() -> AgentState:
     return state
 
 
+def failed_syntax_state() -> AgentState:
+    state = AgentState(task=make_task())
+    state.current_hypothesis = "The replacement expression is valid."
+    state.changed_files = ["src/calculator.py"]
+    state.repository_revision = 1
+    state.actions.extend(
+        [
+            ToolAction(
+                tool=ToolName.APPLY_PATCH,
+                arguments={"patch_text": "diff --git ..."},
+                rationale="Apply the first hypothesis.",
+            ),
+            ToolAction(
+                tool=ToolName.CHECK_SYNTAX,
+                arguments={},
+                rationale="Validate changed Python syntax.",
+            ),
+        ]
+    )
+    state.observations.extend(
+        [
+            ToolObservation(
+                tool=ToolName.APPLY_PATCH,
+                status=ObservationStatus.OK,
+                summary="Patch applied.",
+            ),
+            ToolObservation(
+                tool=ToolName.CHECK_SYNTAX,
+                status=ObservationStatus.ERROR,
+                summary="Python syntax check failed.",
+                output="src/calculator.py:5:12: invalid syntax",
+            ),
+        ]
+    )
+    return state
+
+
 def initial_state() -> AgentState:
     return AgentState(task=make_task())
 
@@ -247,3 +284,25 @@ def test_invalid_reflection_is_retried_with_correction_prompt() -> None:
     assert model.calls == 2
     assert decision.hypothesis == "The loop excludes the final item."
     assert "CORRECTION REQUIRED" in model.user_prompts[1]
+
+
+def test_failed_syntax_check_requires_reflection() -> None:
+    model = ScriptedModel(
+        [
+            decision_json(
+                reflection=(
+                    "The proposed replacement introduced an incomplete expression "
+                    "and therefore could not be parsed."
+                ),
+                hypothesis="The operator must be corrected without changing grouping.",
+            )
+        ]
+    )
+
+    decision = ReflectiveLLMToolPolicy(model).decide(failed_syntax_state())
+
+    assert decision.reflection is not None
+    assert decision.hypothesis == (
+        "The operator must be corrected without changing grouping."
+    )
+    assert "REFLECTION REQUIRED" in model.user_prompts[0]
