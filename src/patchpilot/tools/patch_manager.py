@@ -6,6 +6,7 @@ import difflib
 import os
 import shutil
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from time import perf_counter
 
@@ -47,6 +48,19 @@ class PatchPolicyError(ValueError):
     """Raised when a proposed patch violates mutation policy."""
 
 
+@dataclass(frozen=True)
+class _PatchAttempt:
+    """Exact pre-application snapshots for one successful patch attempt."""
+
+    attempt_id: int
+    snapshots: dict[str, bytes]
+
+    @property
+    def files(self) -> tuple[str, ...]:
+        """Return the files changed by this attempt."""
+        return tuple(sorted(self.snapshots))
+
+
 class PatchManager:
     """Apply bounded patches and retain exact rollback snapshots."""
 
@@ -83,11 +97,27 @@ class PatchManager:
 
         self._original_files: dict[str, bytes] = {}
         self._changed_files: set[str] = set()
+        self._attempts: list[_PatchAttempt] = []
+        self._next_attempt_id = 1
 
     @property
     def changed_files(self) -> tuple[str, ...]:
         """Return repository-relative files changed in this run."""
         return tuple(sorted(self._changed_files))
+
+    @property
+    def current_attempt_id(self) -> int | None:
+        """Return the newest active patch-attempt identifier."""
+        if not self._attempts:
+            return None
+        return self._attempts[-1].attempt_id
+
+    @property
+    def current_attempt_files(self) -> tuple[str, ...]:
+        """Return files changed by the newest active patch attempt."""
+        if not self._attempts:
+            return ()
+        return self._attempts[-1].files
 
     @staticmethod
     def _within(
@@ -271,6 +301,51 @@ class PatchManager:
             duration_seconds=perf_counter() - started_at,
         )
 
+    def _recompute_changed_files(self) -> None:
+        """Synchronize run-level change tracking with repository contents."""
+        unchanged: list[str] = []
+        for path, original in self._original_files.items():
+            current = (self.repository_root / path).read_bytes()
+            if current == original:
+                unchanged.append(path)
+            else:
+                self._changed_files.add(path)
+
+        for path in unchanged:
+            self._changed_files.discard(path)
+            self._original_files.pop(path, None)
+
+    def _restore_snapshot(self, snapshots: dict[str, bytes]) -> None:
+        """Restore a group of files atomically from exact byte snapshots."""
+        current = {
+            path: (self.repository_root / path).read_bytes() for path in snapshots
+        }
+        written: list[str] = []
+
+        try:
+            for path, content in snapshots.items():
+                (self.repository_root / path).write_bytes(content)
+                written.append(path)
+        except OSError:
+            for path in written:
+                (self.repository_root / path).write_bytes(current[path])
+            raise
+
+    def _prune_attempt_path(self, path: str) -> None:
+        """Remove a manually restored path from stored attempt snapshots."""
+        retained: list[_PatchAttempt] = []
+        for attempt in self._attempts:
+            snapshots = dict(attempt.snapshots)
+            snapshots.pop(path, None)
+            if snapshots:
+                retained.append(
+                    _PatchAttempt(
+                        attempt_id=attempt.attempt_id,
+                        snapshots=snapshots,
+                    )
+                )
+        self._attempts = retained
+
     def _run_git_apply(
         self,
         patch_text: str,
@@ -358,10 +433,20 @@ class PatchManager:
                 self._original_files.setdefault(path, content)
                 self._changed_files.add(path)
 
+            attempt = _PatchAttempt(
+                attempt_id=self._next_attempt_id,
+                snapshots=snapshots,
+            )
+            self._attempts.append(attempt)
+            self._next_attempt_id += 1
+
             return self._observation(
                 ToolName.APPLY_PATCH,
                 ObservationStatus.OK,
-                f"Applied patch to {len(paths)} file(s).",
+                (
+                    f"Applied patch attempt {attempt.attempt_id} "
+                    f"to {len(paths)} file(s)."
+                ),
                 started_at,
                 "\n".join(paths),
             )
@@ -424,15 +509,16 @@ class PatchManager:
                     started_at,
                 )
 
-            (self.repository_root / path).write_bytes(self._original_files[path])
-            self._changed_files.discard(path)
-            self._original_files.pop(path)
+            self._restore_snapshot({path: self._original_files[path]})
+            self._prune_attempt_path(path)
+            self._recompute_changed_files()
 
             return self._observation(
                 ToolName.RESTORE_FILE,
                 ObservationStatus.OK,
-                f"Restored {path}.",
+                f"Restored {path} to its pre-run content.",
                 started_at,
+                path,
             )
         except PatchPolicyError as exc:
             return self._observation(
@@ -441,17 +527,76 @@ class PatchManager:
                 str(exc),
                 started_at,
             )
+        except OSError as exc:
+            return self._observation(
+                ToolName.RESTORE_FILE,
+                ObservationStatus.ERROR,
+                "File restoration failed without committing a partial rollback.",
+                started_at,
+                str(exc),
+            )
+
+    def restore_attempt(self) -> ToolObservation:
+        """Atomically rollback every file changed by the latest patch attempt."""
+        started_at = perf_counter()
+
+        if not self._attempts:
+            return self._observation(
+                ToolName.RESTORE_FILE,
+                ObservationStatus.ERROR,
+                "No active patch attempt is available for rollback.",
+                started_at,
+            )
+
+        attempt = self._attempts[-1]
+
+        try:
+            self._restore_snapshot(attempt.snapshots)
+        except OSError as exc:
+            return self._observation(
+                ToolName.RESTORE_FILE,
+                ObservationStatus.ERROR,
+                (
+                    "Patch-attempt rollback failed without committing "
+                    "a partial rollback."
+                ),
+                started_at,
+                str(exc),
+            )
+
+        self._attempts.pop()
+        self._recompute_changed_files()
+
+        return self._observation(
+            ToolName.RESTORE_FILE,
+            ObservationStatus.OK,
+            (
+                f"Rolled back patch attempt {attempt.attempt_id} "
+                f"across {len(attempt.snapshots)} file(s)."
+            ),
+            started_at,
+            "\n".join(attempt.files),
+        )
 
     def restore_all(self) -> ToolObservation:
         """Restore every file modified during this agent run."""
         started_at = perf_counter()
         restored = sorted(self._original_files)
 
-        for path in restored:
-            (self.repository_root / path).write_bytes(self._original_files[path])
+        try:
+            self._restore_snapshot(dict(self._original_files))
+        except OSError as exc:
+            return self._observation(
+                ToolName.RESTORE_FILE,
+                ObservationStatus.ERROR,
+                "Full rollback failed without committing a partial rollback.",
+                started_at,
+                str(exc),
+            )
 
         self._original_files.clear()
         self._changed_files.clear()
+        self._attempts.clear()
 
         return self._observation(
             ToolName.RESTORE_FILE,

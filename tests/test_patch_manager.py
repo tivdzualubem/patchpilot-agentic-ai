@@ -266,3 +266,126 @@ def test_patch_modifying_more_than_two_files_is_rejected(
 
     assert result.status is ObservationStatus.REJECTED
     assert "more files than the configured limit" in result.summary
+
+
+def two_file_patch() -> str:
+    """Return one bounded patch attempt that changes two source files."""
+    return (
+        "diff --git a/src/calculator.py b/src/calculator.py\n"
+        "--- a/src/calculator.py\n"
+        "+++ b/src/calculator.py\n"
+        "@@ -1,2 +1,2 @@\n"
+        " def add(left: int, right: int) -> int:\n"
+        "-    return left + right\n"
+        "+    return left * right\n"
+        "diff --git a/src/helpers.py b/src/helpers.py\n"
+        "--- a/src/helpers.py\n"
+        "+++ b/src/helpers.py\n"
+        "@@ -1 +1 @@\n"
+        "-SCALE = 1\n"
+        "+SCALE = 2\n"
+    )
+
+
+def test_latest_attempt_rollback_restores_all_attempt_files(
+    patch_environment: tuple[Path, PatchManager],
+) -> None:
+    source, manager = patch_environment
+    helper = source.parent / "helpers.py"
+    helper.write_text("SCALE = 1\n", encoding="utf-8")
+
+    first = manager.apply_patch(valid_patch())
+    second = manager.apply_patch(two_file_patch())
+
+    assert first.status is ObservationStatus.OK
+    assert second.status is ObservationStatus.OK
+    assert manager.current_attempt_id == 2
+    assert manager.current_attempt_files == (
+        "src/calculator.py",
+        "src/helpers.py",
+    )
+
+    rolled_back = manager.restore_attempt()
+
+    assert rolled_back.status is ObservationStatus.OK
+    assert "patch attempt 2" in rolled_back.summary
+    assert rolled_back.output.splitlines() == [
+        "src/calculator.py",
+        "src/helpers.py",
+    ]
+    assert "return left + right" in source.read_text(encoding="utf-8")
+    assert helper.read_text(encoding="utf-8") == "SCALE = 1\n"
+    assert manager.current_attempt_id == 1
+    assert manager.current_attempt_files == ("src/calculator.py",)
+    assert manager.changed_files == ("src/calculator.py",)
+
+
+def test_attempt_rollback_preserves_earlier_successful_attempt(
+    patch_environment: tuple[Path, PatchManager],
+) -> None:
+    source, manager = patch_environment
+    helper = source.parent / "helpers.py"
+    helper.write_text("SCALE = 1\n", encoding="utf-8")
+
+    manager.apply_patch(valid_patch())
+    manager.apply_patch(two_file_patch())
+    manager.restore_attempt()
+
+    rolled_back_first = manager.restore_attempt()
+
+    assert rolled_back_first.status is ObservationStatus.OK
+    assert "patch attempt 1" in rolled_back_first.summary
+    assert "return left - right" in source.read_text(encoding="utf-8")
+    assert helper.read_text(encoding="utf-8") == "SCALE = 1\n"
+    assert manager.current_attempt_id is None
+    assert manager.current_attempt_files == ()
+    assert manager.changed_files == ()
+
+
+def test_attempt_rollback_is_atomic_on_write_failure(
+    patch_environment: tuple[Path, PatchManager],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, manager = patch_environment
+    helper = source.parent / "helpers.py"
+    helper.write_text("SCALE = 1\n", encoding="utf-8")
+
+    manager.apply_patch(valid_patch())
+    manager.apply_patch(two_file_patch())
+    patched_source = source.read_bytes()
+    patched_helper = helper.read_bytes()
+
+    original_write_bytes = Path.write_bytes
+    failed = False
+
+    def fail_second_restore(path: Path, data: bytes) -> int:
+        nonlocal failed
+        if path == helper and data == b"SCALE = 1\n" and not failed:
+            failed = True
+            raise OSError("simulated rollback write failure")
+        return original_write_bytes(path, data)
+
+    monkeypatch.setattr(Path, "write_bytes", fail_second_restore)
+
+    result = manager.restore_attempt()
+
+    assert result.status is ObservationStatus.ERROR
+    assert "partial rollback" in result.summary
+    assert source.read_bytes() == patched_source
+    assert helper.read_bytes() == patched_helper
+    assert manager.current_attempt_id == 2
+    assert manager.current_attempt_files == (
+        "src/calculator.py",
+        "src/helpers.py",
+    )
+
+
+def test_restore_attempt_without_active_attempt_reports_error(
+    patch_environment: tuple[Path, PatchManager],
+) -> None:
+    _, manager = patch_environment
+
+    result = manager.restore_attempt()
+
+    assert result.status is ObservationStatus.ERROR
+    assert "No active patch attempt" in result.summary
