@@ -114,9 +114,14 @@ class HiddenTestRunner:
 
     @staticmethod
     def _environment(repository_root: Path) -> dict[str, str]:
+        python_paths = [repository_root]
+        source_root = repository_root / "src"
+        if source_root.is_dir():
+            python_paths.append(source_root)
+
         return {
             "PATH": os.environ.get("PATH", ""),
-            "PYTHONPATH": str(repository_root),
+            "PYTHONPATH": os.pathsep.join(str(path) for path in python_paths),
             "PYTHONDONTWRITEBYTECODE": "1",
             "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
             "LANG": "C.UTF-8",
