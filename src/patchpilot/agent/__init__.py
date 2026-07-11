@@ -1,5 +1,9 @@
 """Agent orchestration components."""
 
+from patchpilot.agent.baseline_policies import (
+    FixedWorkflowPolicy,
+    OneShotRepairPolicy,
+)
 from patchpilot.agent.control_loop import AgentControlLoop
 from patchpilot.agent.executor import AgentToolExecutor
 from patchpilot.agent.llm_policy import (
@@ -17,7 +21,9 @@ __all__ = [
     "AgentDecision",
     "AgentPolicy",
     "AgentToolExecutor",
+    "FixedWorkflowPolicy",
     "LLMToolPolicy",
+    "OneShotRepairPolicy",
     "PolicyResponseError",
     "ReflectiveLLMToolPolicy",
     "RunTrace",
