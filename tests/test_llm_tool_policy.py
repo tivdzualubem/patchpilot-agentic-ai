@@ -114,6 +114,7 @@ def test_model_selects_first_tool_and_receives_decision_schema() -> None:
     assert model.response_schemas[0] is not None
     assert "properties" in model.response_schemas[0]
     assert "list_files" in model.system_prompts[0]
+    assert "check_syntax" in model.system_prompts[0]
     assert "tool-agent-001" in model.user_prompts[0]
     assert '"allowed_paths": [' in model.user_prompts[0]
 

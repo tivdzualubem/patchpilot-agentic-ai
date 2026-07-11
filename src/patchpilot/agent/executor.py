@@ -18,7 +18,12 @@ from patchpilot.schemas import (
     ToolName,
     ToolObservation,
 )
-from patchpilot.tools import PatchManager, RepositorySandbox, TestRunner
+from patchpilot.tools import (
+    PatchManager,
+    RepositorySandbox,
+    SyntaxChecker,
+    TestRunner,
+)
 
 
 class _Arguments(BaseModel):
@@ -48,6 +53,10 @@ class _SearchCodeArguments(_Arguments):
 
 class _RunTestsArguments(_Arguments):
     target: str | None = None
+
+
+class _CheckSyntaxArguments(_Arguments):
+    pass
 
 
 class _ApplyPatchArguments(_Arguments):
@@ -97,6 +106,7 @@ class AgentToolExecutor:
             timeout_seconds=test_timeout_seconds,
         )
         self.patch_manager = PatchManager(self.sandbox, task)
+        self.syntax_checker = SyntaxChecker(self.sandbox)
         self.repeated_action_guard = repeated_action_guard or RepeatedActionGuard()
         self._started_at = perf_counter()
 
@@ -240,6 +250,13 @@ class AgentToolExecutor:
                 return (
                     self.test_runner.run_tests(test_args.target),
                     test_args.target,
+                )
+
+            if action.tool is ToolName.CHECK_SYNTAX:
+                _CheckSyntaxArguments.model_validate(action.arguments)
+                return (
+                    self.syntax_checker.check_files(self.patch_manager.changed_files),
+                    None,
                 )
 
             if action.tool is ToolName.APPLY_PATCH:

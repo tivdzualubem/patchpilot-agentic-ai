@@ -433,3 +433,75 @@ def test_repeated_action_rejection_is_audited(
     assert state.actions[-1].tool is ToolName.LIST_FILES
     assert state.observations[-1].status is ObservationStatus.REJECTED
     assert state.observations[-1].summary == result.summary
+
+
+def invalid_syntax_patch() -> str:
+    """Return a patch that applies but creates invalid Python syntax."""
+    return (
+        "diff --git a/src/calculator.py b/src/calculator.py\n"
+        "--- a/src/calculator.py\n"
+        "+++ b/src/calculator.py\n"
+        "@@ -1,2 +1,2 @@\n"
+        " def add(left: int, right: int) -> int:\n"
+        "-    return left - right\n"
+        "+    return (\n"
+    )
+
+
+def test_syntax_check_passes_after_valid_patch(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+    executor.execute(
+        state,
+        action(
+            ToolName.APPLY_PATCH,
+            {"patch_text": repair_patch()},
+        ),
+    )
+
+    result = executor.execute(
+        state,
+        action(ToolName.CHECK_SYNTAX),
+    )
+
+    assert result.status is ObservationStatus.OK
+    assert result.output == "src/calculator.py"
+
+
+def test_syntax_check_reports_invalid_changed_source(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+    executor.execute(
+        state,
+        action(
+            ToolName.APPLY_PATCH,
+            {"patch_text": invalid_syntax_patch()},
+        ),
+    )
+
+    result = executor.execute(
+        state,
+        action(ToolName.CHECK_SYNTAX),
+    )
+
+    assert result.status is ObservationStatus.ERROR
+    assert "src/calculator.py:2:" in result.output
+
+
+def test_syntax_check_rejects_unexpected_arguments(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+
+    result = executor.execute(
+        state,
+        action(
+            ToolName.CHECK_SYNTAX,
+            {"relative_path": "src/calculator.py"},
+        ),
+    )
+
+    assert result.status is ObservationStatus.REJECTED
+    assert "Invalid tool arguments" in result.summary

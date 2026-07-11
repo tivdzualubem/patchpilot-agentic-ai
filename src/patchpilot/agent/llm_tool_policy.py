@@ -49,6 +49,13 @@ class LLMToolPolicy:
             },
             "purpose": "Run an allowed targeted test or the full test suite.",
         },
+        "check_syntax": {
+            "arguments": {},
+            "purpose": (
+                "Parse all currently changed Python files and report syntax "
+                "errors before test execution."
+            ),
+        },
         "apply_patch": {
             "arguments": {"patch_text": "required unified diff"},
             "purpose": (

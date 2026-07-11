@@ -32,6 +32,7 @@ class ToolName(StrEnum):
     READ_FILE = "read_file"
     SEARCH_CODE = "search_code"
     RUN_TESTS = "run_tests"
+    CHECK_SYNTAX = "check_syntax"
     APPLY_PATCH = "apply_patch"
     VIEW_DIFF = "view_diff"
     RESTORE_FILE = "restore_file"
