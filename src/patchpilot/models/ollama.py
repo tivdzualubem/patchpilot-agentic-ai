@@ -70,7 +70,27 @@ class OllamaChatModel:
         }
 
         if response_schema is not None:
-            payload["format"] = "json"
+            try:
+                schema_text = json.dumps(
+                    response_schema,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+            except (TypeError, ValueError) as exc:
+                raise ValueError("response_schema must be JSON-serializable.") from exc
+
+            payload["format"] = response_schema
+            messages = payload["messages"]
+            if not isinstance(messages, list):
+                raise AssertionError("Ollama messages payload must be a list.")
+
+            user_message = messages[-1]
+            if not isinstance(user_message, dict):
+                raise AssertionError("Ollama user message must be an object.")
+
+            user_message["content"] = (
+                f"{user_prompt}\n\nRESPONSE JSON SCHEMA:\n{schema_text}"
+            )
 
         request = Request(
             f"{self.base_url}/api/chat",
