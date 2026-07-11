@@ -51,6 +51,9 @@ def make_state() -> AgentState:
     )
     state.status = AgentStatus.SUCCEEDED
     state.full_suite_passed = True
+    state.hidden_suite_status = "passed"
+    state.hidden_suite_passed = True
+    state.hidden_suite_test_count = 3
     state.changed_files = ["src/example.py"]
     state.reflections = ["The first repair did not address the root cause."]
     state.rejected_hypotheses = ["The comparison operator is incorrect."]
@@ -142,6 +145,12 @@ def test_collect_run_metrics_counts_agentic_behaviour() -> None:
     assert row.task_id == "example-001"
     assert row.succeeded is True
     assert row.full_suite_passed is True
+    assert row.hidden_suite_status == "passed"
+    assert row.hidden_suite_configured is True
+    assert row.hidden_suite_passed is True
+    assert row.hidden_suite_test_count == 3
+    assert row.hidden_verified_success is True
+    assert row.visible_hidden_disagreement is False
     assert row.policy_failure is False
     assert row.model_calls == 3
     assert row.decision_parse_failures == 1
@@ -198,6 +207,12 @@ def test_summarise_runs_computes_agentic_rates_and_means() -> None:
     assert summary.runs == 1
     assert summary.repair_rate == 1.0
     assert summary.full_suite_pass_rate == 1.0
+    assert summary.hidden_suite_runs == 1
+    assert summary.hidden_suite_passes == 1
+    assert summary.hidden_suite_pass_rate == 1.0
+    assert summary.hidden_verified_successes == 1
+    assert summary.hidden_verified_repair_rate == 1.0
+    assert summary.visible_hidden_disagreement_rate == 0.0
     assert summary.invalid_patch_rate == 1.0
     assert summary.reflection_rate == 1.0
     assert summary.syntax_error_rate == 0.0
@@ -249,3 +264,24 @@ def test_no_progress_rejections_are_measured() -> None:
     assert summary.no_progress_runs == 1
     assert summary.no_progress_rate == 1.0
     assert summary.mean_no_progress_rejections == 1.0
+
+
+def test_visible_hidden_disagreement_is_measured() -> None:
+    state = make_state()
+    state.hidden_suite_status = "failed"
+    state.hidden_suite_passed = False
+    state.hidden_suite_test_count = 2
+
+    row = collect_run_metrics(
+        run_id="run-hidden-disagreement",
+        condition="full-agent",
+        state=state,
+    )
+    summary = summarise_runs([row])[0]
+
+    assert row.visible_hidden_disagreement is True
+    assert row.hidden_verified_success is False
+    assert summary.hidden_suite_pass_rate == 0.0
+    assert summary.hidden_verified_repair_rate == 0.0
+    assert summary.visible_hidden_disagreements == 1
+    assert summary.visible_hidden_disagreement_rate == 1.0

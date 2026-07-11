@@ -271,6 +271,7 @@ def run_condition(
         print(
             f"DONE {condition.value} {manifest.task_id}: "
             f"status={row.status} success={row.succeeded} "
+            f"hidden={row.hidden_suite_status} "
             f"steps={row.steps} patches={row.patch_attempts}",
             flush=True,
         )
@@ -315,6 +316,15 @@ def experiment_configuration(
             "seed": args.seed,
             "max_tokens": args.max_tokens,
             "timeout_seconds": args.model_timeout_seconds,
+        },
+        "hidden_verification": {
+            "phase": "post_run_external",
+            "output_exposed_to_agent": False,
+            "configured_manifest_count": sum(
+                1
+                for path in manifests
+                if load_manifest(path).hidden_test_root is not None
+            ),
         },
         "test_timeout_seconds": args.test_timeout_seconds,
         "manifest_root": args.manifest_root,

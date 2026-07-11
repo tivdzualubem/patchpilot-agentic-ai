@@ -28,6 +28,12 @@ class RunMetricRow(BaseModel):
     verified_success: bool
     unverified_success: bool
     full_suite_passed: bool
+    hidden_suite_status: str = Field(default="not_run", min_length=1)
+    hidden_suite_configured: bool = False
+    hidden_suite_passed: bool | None = None
+    hidden_suite_test_count: int = Field(default=0, ge=0)
+    hidden_verified_success: bool = False
+    visible_hidden_disagreement: bool = False
     policy_failure: bool
     model_calls: int = Field(ge=0)
     decision_parse_failures: int = Field(ge=0)
@@ -80,6 +86,17 @@ class SummaryMetricRow(BaseModel):
     verified_repair_rate: float = Field(ge=0, le=1)
     unverified_success_rate: float = Field(ge=0, le=1)
     full_suite_pass_rate: float = Field(ge=0, le=1)
+    hidden_suite_runs: int = Field(default=0, ge=0)
+    hidden_suite_passes: int = Field(default=0, ge=0)
+    hidden_suite_pass_rate: float = Field(default=0.0, ge=0, le=1)
+    hidden_verified_successes: int = Field(default=0, ge=0)
+    hidden_verified_repair_rate: float = Field(default=0.0, ge=0, le=1)
+    visible_hidden_disagreements: int = Field(default=0, ge=0)
+    visible_hidden_disagreement_rate: float = Field(
+        default=0.0,
+        ge=0,
+        le=1,
+    )
     invalid_patch_runs: int = Field(ge=0)
     invalid_patch_rate: float = Field(ge=0, le=1)
     reflection_runs: int = Field(ge=0)
@@ -207,6 +224,16 @@ def collect_run_metrics(
         and state.full_suite_passed
         and state.verified_revision == state.repository_revision
     )
+    hidden_suite_configured = state.hidden_suite_status not in {
+        "not_run",
+        "not_configured",
+    }
+    hidden_verified_success = bool(succeeded and state.hidden_suite_passed is True)
+    visible_hidden_disagreement = bool(
+        hidden_suite_configured
+        and state.hidden_suite_passed is not None
+        and state.full_suite_passed != state.hidden_suite_passed
+    )
 
     return RunMetricRow(
         run_id=run_id,
@@ -218,6 +245,12 @@ def collect_run_metrics(
         verified_success=verified_success,
         unverified_success=succeeded and not verified_success,
         full_suite_passed=state.full_suite_passed,
+        hidden_suite_status=state.hidden_suite_status,
+        hidden_suite_configured=hidden_suite_configured,
+        hidden_suite_passed=state.hidden_suite_passed,
+        hidden_suite_test_count=state.hidden_suite_test_count,
+        hidden_verified_success=hidden_verified_success,
+        visible_hidden_disagreement=visible_hidden_disagreement,
         policy_failure=policy_failure,
         model_calls=state.model_calls,
         decision_parse_failures=state.decision_parse_failures,
@@ -281,6 +314,17 @@ def summarise_runs(rows: Iterable[RunMetricRow]) -> list[SummaryMetricRow]:
             1 for row in condition_rows if row.unverified_success
         )
         full_passes = sum(1 for row in condition_rows if row.full_suite_passed)
+        hidden_rows = [row for row in condition_rows if row.hidden_suite_configured]
+        hidden_suite_runs = len(hidden_rows)
+        hidden_suite_passes = sum(
+            1 for row in hidden_rows if row.hidden_suite_passed is True
+        )
+        hidden_verified_successes = sum(
+            1 for row in condition_rows if row.hidden_verified_success
+        )
+        visible_hidden_disagreements = sum(
+            1 for row in hidden_rows if row.visible_hidden_disagreement
+        )
         invalid_patch_runs = sum(
             1 for row in condition_rows if row.invalid_patch_count > 0
         )
@@ -321,6 +365,21 @@ def summarise_runs(rows: Iterable[RunMetricRow]) -> list[SummaryMetricRow]:
                 verified_repair_rate=verified_successes / count,
                 unverified_success_rate=unverified_successes / count,
                 full_suite_pass_rate=full_passes / count,
+                hidden_suite_runs=hidden_suite_runs,
+                hidden_suite_passes=hidden_suite_passes,
+                hidden_suite_pass_rate=(
+                    hidden_suite_passes / hidden_suite_runs
+                    if hidden_suite_runs
+                    else 0.0
+                ),
+                hidden_verified_successes=hidden_verified_successes,
+                hidden_verified_repair_rate=hidden_verified_successes / count,
+                visible_hidden_disagreements=visible_hidden_disagreements,
+                visible_hidden_disagreement_rate=(
+                    visible_hidden_disagreements / hidden_suite_runs
+                    if hidden_suite_runs
+                    else 0.0
+                ),
                 invalid_patch_runs=invalid_patch_runs,
                 invalid_patch_rate=invalid_patch_runs / count,
                 reflection_runs=reflection_runs,

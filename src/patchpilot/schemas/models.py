@@ -286,6 +286,17 @@ class AgentState(BaseModel):
     verified_revision: int | None = Field(default=None, ge=0)
     full_suite_passed: bool = False
 
+    hidden_suite_status: str = Field(default="not_run", min_length=1, max_length=50)
+    hidden_suite_passed: bool | None = None
+    hidden_suite_test_count: int = Field(default=0, ge=0)
+    hidden_suite_duration_seconds: float = Field(default=0.0, ge=0)
+    hidden_suite_return_code: int | None = None
+    hidden_suite_output_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
+    hidden_suite_error_type: str | None = Field(default=None, max_length=200)
+
     final_message: str | None = None
 
     @property

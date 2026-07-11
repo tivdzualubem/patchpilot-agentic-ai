@@ -17,5 +17,7 @@
     "pytest",
     "-q"
   ],
-  "expected_initial_failures": 2
+  "expected_initial_failures": 2,
+  "hidden_test_root": "benchmarks/strings-001/hidden_tests",
+  "expected_hidden_tests": 2
 }
