@@ -505,3 +505,32 @@ def test_syntax_check_rejects_unexpected_arguments(
 
     assert result.status is ObservationStatus.REJECTED
     assert "Invalid tool arguments" in result.summary
+
+
+def test_repeated_action_cycle_is_rejected_and_escalated(
+    executor_state: tuple[AgentToolExecutor, AgentState],
+) -> None:
+    executor, state = executor_state
+    executor.repeated_action_guard.max_no_progress_events = 1
+
+    read = action(
+        ToolName.READ_FILE,
+        {"relative_path": "src/calculator.py"},
+    )
+    search = action(
+        ToolName.SEARCH_CODE,
+        {"query": "return"},
+    )
+
+    executor.execute(state, read)
+    executor.execute(state, search)
+    executor.execute(state, read)
+    result = executor.execute(state, search)
+
+    assert result.status is ObservationStatus.REJECTED
+    assert "repeated action cycle" in result.summary
+    assert state.status is AgentStatus.ESCALATED
+    assert state.no_progress_streak == 1
+    assert state.final_message is not None
+    assert "no-progress" in state.final_message
+    assert len(state.progress_snapshots) == len(state.actions)

@@ -187,3 +187,35 @@ def test_summarise_runs_computes_agentic_rates_and_means() -> None:
     assert summary.mean_failed_tests == 1.0
     assert summary.mean_reflections == 1.0
     assert summary.mean_hypothesis_revisions == 1.0
+
+
+def test_no_progress_rejections_are_measured() -> None:
+    state = make_state()
+    state.actions.append(
+        action(
+            ToolName.SEARCH_CODE,
+            arguments={"query": "return"},
+        )
+    )
+    state.observations.append(
+        observation(
+            ToolName.SEARCH_CODE,
+            ObservationStatus.REJECTED,
+            (
+                "Rejected no-progress: repeated action cycle with unchanged "
+                "repository, tests, hypothesis, and changed files."
+            ),
+        )
+    )
+
+    row = collect_run_metrics(
+        run_id="run-003",
+        condition="full-agent",
+        state=state,
+    )
+    summary = summarise_runs([row])[0]
+
+    assert row.no_progress_rejection_count == 1
+    assert summary.no_progress_runs == 1
+    assert summary.no_progress_rate == 1.0
+    assert summary.mean_no_progress_rejections == 1.0

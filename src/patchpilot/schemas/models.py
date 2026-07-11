@@ -163,6 +163,22 @@ class ToolObservation(BaseModel):
     duration_seconds: float = Field(default=0.0, ge=0)
 
 
+class ProgressSnapshot(BaseModel):
+    """One durable no-progress detection checkpoint."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    repository_revision: int = Field(ge=0)
+    latest_test_evidence_hash: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
+    current_hypothesis: str | None = None
+    changed_files: tuple[str, ...] = Field(default_factory=tuple)
+    full_suite_passed: bool = False
+    verified_revision: int | None = Field(default=None, ge=0)
+
+
 class AgentState(BaseModel):
     """Structured short-term memory for a PatchPilot run."""
 
@@ -181,6 +197,8 @@ class AgentState(BaseModel):
     actions: list[ToolAction] = Field(default_factory=list)
     observations: list[ToolObservation] = Field(default_factory=list)
     changed_files: list[str] = Field(default_factory=list)
+    progress_snapshots: list[ProgressSnapshot] = Field(default_factory=list)
+    no_progress_streak: int = Field(default=0, ge=0)
 
     repository_revision: int = Field(default=0, ge=0)
     verified_revision: int | None = Field(default=None, ge=0)

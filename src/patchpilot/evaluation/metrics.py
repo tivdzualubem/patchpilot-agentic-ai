@@ -45,6 +45,7 @@ class RunMetricRow(BaseModel):
     finish_rejection_count: int = Field(ge=0)
     reflection_count: int = Field(ge=0)
     hypothesis_revision_count: int = Field(ge=0)
+    no_progress_rejection_count: int = Field(ge=0)
     budget_exhausted: bool
     final_message: str | None = None
 
@@ -66,6 +67,8 @@ class SummaryMetricRow(BaseModel):
     reflection_rate: float = Field(ge=0, le=1)
     syntax_error_runs: int = Field(ge=0)
     syntax_error_rate: float = Field(ge=0, le=1)
+    no_progress_runs: int = Field(ge=0)
+    no_progress_rate: float = Field(ge=0, le=1)
     budget_exhaustions: int = Field(ge=0)
     policy_failures: int = Field(ge=0)
     escalations: int = Field(ge=0)
@@ -80,6 +83,7 @@ class SummaryMetricRow(BaseModel):
     mean_failed_tests: float = Field(ge=0)
     mean_reflections: float = Field(ge=0)
     mean_hypothesis_revisions: float = Field(ge=0)
+    mean_no_progress_rejections: float = Field(ge=0)
     mean_elapsed_seconds: float = Field(ge=0)
 
 
@@ -159,6 +163,12 @@ def collect_run_metrics(
         if action.tool == ToolName.FINISH
         and observation.status == ObservationStatus.REJECTED
     )
+    no_progress_rejection_count = sum(
+        1
+        for observation in state.observations
+        if observation.status == ObservationStatus.REJECTED
+        and observation.summary.startswith("Rejected no-progress:")
+    )
     final_message = state.final_message
     policy_failure = bool(
         final_message and final_message.startswith("The decision policy failed safely:")
@@ -191,6 +201,7 @@ def collect_run_metrics(
         finish_rejection_count=finish_rejection_count,
         reflection_count=len(state.reflections),
         hypothesis_revision_count=len(state.rejected_hypotheses),
+        no_progress_rejection_count=no_progress_rejection_count,
         budget_exhausted=state.status == AgentStatus.BUDGET_EXHAUSTED,
         final_message=final_message,
     )
@@ -213,6 +224,9 @@ def summarise_runs(rows: Iterable[RunMetricRow]) -> list[SummaryMetricRow]:
         reflection_runs = sum(1 for row in condition_rows if row.reflection_count > 0)
         syntax_error_runs = sum(
             1 for row in condition_rows if row.syntax_error_count > 0
+        )
+        no_progress_runs = sum(
+            1 for row in condition_rows if row.no_progress_rejection_count > 0
         )
         budget_exhaustions = sum(1 for row in condition_rows if row.budget_exhausted)
         policy_failures = sum(1 for row in condition_rows if row.policy_failure)
@@ -237,6 +251,8 @@ def summarise_runs(rows: Iterable[RunMetricRow]) -> list[SummaryMetricRow]:
                 reflection_rate=reflection_runs / count,
                 syntax_error_runs=syntax_error_runs,
                 syntax_error_rate=syntax_error_runs / count,
+                no_progress_runs=no_progress_runs,
+                no_progress_rate=no_progress_runs / count,
                 budget_exhaustions=budget_exhaustions,
                 policy_failures=policy_failures,
                 escalations=escalations,
@@ -266,6 +282,10 @@ def summarise_runs(rows: Iterable[RunMetricRow]) -> list[SummaryMetricRow]:
                 ),
                 mean_hypothesis_revisions=(
                     sum(row.hypothesis_revision_count for row in condition_rows) / count
+                ),
+                mean_no_progress_rejections=(
+                    sum(row.no_progress_rejection_count for row in condition_rows)
+                    / count
                 ),
                 mean_elapsed_seconds=(
                     sum(row.elapsed_seconds for row in condition_rows) / count

@@ -134,6 +134,7 @@ class AgentToolExecutor:
         """Append an action-observation pair to the trajectory."""
         state.actions.append(action)
         state.observations.append(observation)
+        self.repeated_action_guard.record_progress(state)
         state.usage.elapsed_seconds = perf_counter() - self._started_at
         return observation
 
@@ -348,11 +349,26 @@ class AgentToolExecutor:
         if action.tool is ToolName.APPLY_PATCH:
             state.usage.patch_attempts += 1
 
-        if self.repeated_action_guard.blocks(state, action):
+        no_progress_reason = self.repeated_action_guard.rejection_reason(
+            state,
+            action,
+        )
+        if no_progress_reason is not None:
+            state.no_progress_streak += 1
+            if (
+                state.no_progress_streak
+                >= self.repeated_action_guard.max_no_progress_events
+            ):
+                state.status = AgentStatus.ESCALATED
+                state.final_message = (
+                    "Run escalated after repeated no-progress action patterns."
+                )
+                no_progress_reason = f"{no_progress_reason} {state.final_message}"
+
             return self._reject(
                 state,
                 action,
-                "Rejected repeated identical action with no intervening progress.",
+                no_progress_reason,
             )
 
         if action.tool is ToolName.RESTORE_FILE and not state.changed_files:
