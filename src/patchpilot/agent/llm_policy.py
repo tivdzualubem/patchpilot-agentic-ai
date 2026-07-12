@@ -327,17 +327,177 @@ class StructuredLLMPolicy:
         return f"diff --git a/{path} b/{path}\n" + "\n".join(diff_lines) + "\n"
 
     @staticmethod
-    def _extract_diff(raw_response: str, path: str, read_output: str) -> str:
-        text = raw_response.strip()
-        fence = re.search(r"```(?:diff)?\s*(.*?)```", text, re.DOTALL)
-        if fence:
-            text = fence.group(1).strip()
-
-        return StructuredLLMPolicy._synthesise_single_line_diff(
-            text,
-            path,
-            read_output,
+    def _function_span(
+        lines: list[str],
+        target: str,
+    ) -> tuple[int, int, str] | None:
+        """Locate a Python function block by indentation."""
+        pattern = re.compile(
+            rf"^(?P<indent>[ \t]*)(?:async[ \t]+def|def)"
+            rf"[ \t]+{re.escape(target)}[ \t]*\("
         )
+
+        for start, line in enumerate(lines):
+            match = pattern.match(line)
+            if match is None:
+                continue
+
+            indentation = match.group("indent")
+            indentation_width = len(indentation.expandtabs(4))
+            end = len(lines)
+
+            for index in range(start + 1, len(lines)):
+                following = lines[index]
+                if not following.strip():
+                    continue
+
+                leading = following[: len(following) - len(following.lstrip())]
+                if len(leading.expandtabs(4)) <= indentation_width:
+                    end = index
+                    break
+
+            return start, end, indentation
+
+        return None
+
+    @staticmethod
+    def _unfenced_response(raw_response: str) -> str:
+        """Strip one optional Python code fence from a model response."""
+        text = raw_response.strip()
+        fence = re.search(
+            r"```(?:python|py)?\s*(.*?)```",
+            text,
+            flags=re.DOTALL | re.IGNORECASE,
+        )
+        if fence:
+            return fence.group(1).strip()
+        return text
+
+    @classmethod
+    def _synthesise_function_diff(
+        cls,
+        raw_response: str,
+        path: str,
+        read_output: str,
+        target: str,
+    ) -> str:
+        """Build a bounded unified diff from one corrected function."""
+        original = [line for _, line in cls._source_lines(read_output)]
+        original_span = cls._function_span(original, target)
+        if original_span is None:
+            raise PolicyResponseError(
+                f"Could not locate function {target} in the read source.",
+                raw_response=raw_response,
+            )
+
+        candidate_text = cls._unfenced_response(raw_response)
+        candidate_lines = candidate_text.splitlines()
+        if any(
+            line.startswith(("diff --git ", "--- ", "+++ ", "@@ "))
+            for line in candidate_lines
+        ):
+            raise PolicyResponseError(
+                "Diff-formatted output must use the compatibility parser.",
+                raw_response=raw_response,
+            )
+        candidate_span = cls._function_span(candidate_lines, target)
+        if candidate_span is None:
+            raise PolicyResponseError(
+                f"Model response did not contain function {target}.",
+                raw_response=raw_response,
+            )
+
+        original_start, original_end, destination_indent = original_span
+        candidate_start, candidate_end, candidate_indent = candidate_span
+        replacement = candidate_lines[candidate_start:candidate_end]
+
+        while replacement and not replacement[-1].strip():
+            replacement.pop()
+
+        normalized: list[str] = []
+        for line in replacement:
+            if not line.strip():
+                normalized.append("")
+                continue
+
+            if line.startswith(candidate_indent):
+                relative = line[len(candidate_indent) :]
+            else:
+                relative = line.lstrip()
+            normalized.append(destination_indent + relative)
+
+        updated = [
+            *original[:original_start],
+            *normalized,
+            *original[original_end:],
+        ]
+        if updated == original:
+            raise PolicyResponseError(
+                f"Model returned an unchanged function {target}.",
+                raw_response=raw_response,
+            )
+
+        diff = list(
+            difflib.unified_diff(
+                original,
+                updated,
+                fromfile=f"a/{path}",
+                tofile=f"b/{path}",
+                n=3,
+                lineterm="",
+            )
+        )
+        patch_text = f"diff --git a/{path} b/{path}\n" + "\n".join(diff) + "\n"
+
+        changed_lines = sum(
+            1
+            for line in patch_text.splitlines()
+            if line.startswith(("+", "-")) and not line.startswith(("+++", "---"))
+        )
+        if changed_lines > 20:
+            raise PolicyResponseError(
+                "Corrected function exceeds the 20-line patch boundary.",
+                raw_response=raw_response,
+            )
+
+        if not cls._has_changed_lines(patch_text):
+            raise PolicyResponseError(
+                f"Corrected function {target} produced no usable diff.",
+                raw_response=raw_response,
+            )
+
+        return patch_text
+
+    @classmethod
+    def _extract_diff(
+        cls,
+        raw_response: str,
+        path: str,
+        read_output: str,
+        target: str,
+    ) -> str:
+        """Convert a corrected function or line into a unified diff."""
+        try:
+            return cls._synthesise_function_diff(
+                raw_response,
+                path,
+                read_output,
+                target,
+            )
+        except PolicyResponseError as function_error:
+            text = cls._unfenced_response(raw_response)
+            try:
+                return cls._synthesise_single_line_diff(
+                    text,
+                    path,
+                    read_output,
+                )
+            except PolicyResponseError as line_error:
+                raise PolicyResponseError(
+                    "Model response contained neither a usable corrected "
+                    f"function nor a replacement line: {line_error}",
+                    raw_response=raw_response,
+                ) from function_error
 
     @staticmethod
     def _focused_source_context(state: AgentState, read_output: str) -> str:
@@ -367,24 +527,63 @@ class StructuredLLMPolicy:
         selected = lines[context_start:end_index]
         return "\n".join(f"{number}: {line}" for number, line in selected)
 
+    @staticmethod
+    def _previous_patch_texts(state: AgentState) -> list[str]:
+        """Return recent model patches that did not complete the task."""
+        patches: list[str] = []
+        for action in state.actions:
+            if action.tool is not ToolName.APPLY_PATCH:
+                continue
+            patch_text = action.arguments.get("patch_text")
+            if isinstance(patch_text, str) and patch_text.strip():
+                patches.append(patch_text.strip())
+        return patches[-2:]
+
+    @classmethod
+    def _ensure_novel_patch(
+        cls,
+        state: AgentState,
+        patch_text: str,
+        raw_response: str,
+    ) -> None:
+        """Reject exact repeats of patches already tried in this run."""
+        if patch_text.strip() in cls._previous_patch_texts(state):
+            raise PolicyResponseError(
+                "The generated patch exactly repeats a previous failed patch. "
+                "Revise the repair using the latest failing-test evidence.",
+                raw_response=raw_response,
+            )
+
     def _generate_patch_decision(self, state: AgentState) -> AgentDecision:
         path, content = self._last_read_file(state)
         test_output = self._latest_failed_test_output(state)
         focused_content = self._focused_source_context(state, content)
         target = self._target_function_from_failure(state) or "the failing function"
+        previous_patches = self._previous_patch_texts(state)
+        previous_patch_context = ""
+        if previous_patches:
+            previous_patch_context = (
+                "\nPREVIOUS FAILED PATCHES — DO NOT REPEAT:\n"
+                + previous_patches[-1][:1000]
+            )
 
         system_prompt = (
-            "You are PatchPilot. Return only one corrected Python source line."
+            "You are PatchPilot. Return only the complete corrected Python "
+            "function. Satisfy every requirement in the repair goal and every "
+            "remaining failing assertion."
         )
         user_prompt = (
-            "Fix the Python source file using the failing tests.\n"
+            f"REPAIR GOAL: {state.task.goal}\n"
             f"FILE: {path}\n"
             f"TARGET FUNCTION: {target}\n"
-            f"RELEVANT SOURCE CONTEXT:\n{focused_content}\n\n"
-            f"FAILING TEST OUTPUT:\n{test_output[:2000]}\n\n"
-            "Return exactly one corrected replacement line from the source file. "
-            "Do not return an assert line. Do not return test code. "
-            "No diff markers, no markdown, no explanation."
+            f"SOURCE:\n{focused_content}\n"
+            f"FAILING TEST EVIDENCE:\n{test_output[:1400]}\n"
+            "Return the complete corrected definition beginning with def "
+            "or async def. Preserve the signature. Implement every behavior "
+            "named in the repair goal, even when only one test currently "
+            "fails. Return source only, without markdown, tests, diff "
+            "markers, imports, or explanation."
+            f"{previous_patch_context}"
         )
 
         raw_diff, first_record = _generate_with_trace(
@@ -398,7 +597,17 @@ class StructuredLLMPolicy:
             response_schema=None,
         )
         try:
-            patch_text = self._extract_diff(raw_diff, path, content)
+            patch_text = self._extract_diff(
+                raw_diff,
+                path,
+                content,
+                target,
+            )
+            self._ensure_novel_patch(
+                state,
+                patch_text,
+                raw_diff,
+            )
             _mark_model_call_parse(
                 state,
                 first_record,
@@ -412,12 +621,20 @@ class StructuredLLMPolicy:
                 error=first_error,
             )
             state.decision_parse_failures += 1
+            retry_system_prompt = (
+                "You are PatchPilot acting as a repair critic. Return a revised "
+                "complete Python function that differs from the failed patch "
+                "and resolves the remaining evidence."
+            )
             retry_prompt = (
                 user_prompt
-                + "\n\nYour previous answer was not a valid source replacement "
-                "line. Return only the corrected line that belongs in the source "
-                f"function {target}. Previous invalid answer:\n"
-                f"{raw_diff[:500]}"
+                + "\nCORRECTION REQUIRED:"
+                + str(first_error)
+                + "\nThe prior function was incomplete. Preserve "
+                "improvements that passed tests, then change at least one "
+                "different original source line to address the remaining "
+                "assertion. Return only the revised complete function. "
+                "Previous answer:" + raw_diff[:500]
             )
             retry_diff, retry_record = _generate_with_trace(
                 state=state,
@@ -425,12 +642,22 @@ class StructuredLLMPolicy:
                 policy_name=type(self).__name__,
                 purpose="patch_generation",
                 attempt=2,
-                system_prompt=system_prompt,
+                system_prompt=retry_system_prompt,
                 user_prompt=retry_prompt,
                 response_schema=None,
             )
             try:
-                patch_text = self._extract_diff(retry_diff, path, content)
+                patch_text = self._extract_diff(
+                    retry_diff,
+                    path,
+                    content,
+                    target,
+                )
+                self._ensure_novel_patch(
+                    state,
+                    patch_text,
+                    retry_diff,
+                )
                 _mark_model_call_parse(
                     state,
                     retry_record,
@@ -451,7 +678,7 @@ class StructuredLLMPolicy:
 
         return self._make_decision(
             summary="Generate and apply a model-proposed source patch.",
-            plan="Apply the smallest source patch.",
+            plan=("Apply the smallest source patch satisfying all known evidence."),
             tool=ToolName.APPLY_PATCH,
             arguments={"patch_text": patch_text},
             rationale="Apply the model-proposed unified diff.",

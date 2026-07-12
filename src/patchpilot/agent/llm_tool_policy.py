@@ -14,15 +14,19 @@ from patchpilot.agent.llm_policy import (
     _mark_model_call_parse,
 )
 from patchpilot.agent.policy import AgentDecision
-from patchpilot.schemas import AgentState
+from patchpilot.schemas import (
+    AgentState,
+    ObservationStatus,
+    ToolName,
+)
 
 
 class LLMToolPolicy:
     """Ask the model to choose one bounded tool action per control-loop step."""
 
-    _MAX_HISTORY_ITEMS = 8
-    _MAX_OBSERVATION_OUTPUT = 3000
-    _MAX_RAW_RESPONSE = 2000
+    _MAX_HISTORY_ITEMS = 2
+    _MAX_OBSERVATION_OUTPUT = 700
+    _MAX_RAW_RESPONSE = 500
 
     _TOOL_CONTRACT: dict[str, dict[str, object]] = {
         "list_files": {
@@ -111,32 +115,90 @@ class LLMToolPolicy:
         self.max_parse_attempts = max_parse_attempts
 
     @classmethod
-    def _system_prompt(cls) -> str:
-        tool_contract = json.dumps(
-            cls._TOOL_CONTRACT,
-            indent=2,
-            sort_keys=True,
+    def _decision_response_schema(
+        cls,
+        state: AgentState | None = None,
+    ) -> dict[str, object]:
+        """Return a compact schema restricted to currently legal tools."""
+        legal = (
+            cls._legal_actions(state)
+            if state is not None
+            else [tool.value for tool in ToolName]
         )
+        if not legal:
+            legal = [tool.value for tool in ToolName]
+
+        return {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "reasoning_summary": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 1000,
+                },
+                "plan": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 5,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500,
+                    },
+                },
+                "hypothesis": {
+                    "anyOf": [
+                        {"type": "string", "maxLength": 1000},
+                        {"type": "null"},
+                    ]
+                },
+                "reflection": {
+                    "anyOf": [
+                        {"type": "string", "maxLength": 1000},
+                        {"type": "null"},
+                    ]
+                },
+                "action": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "tool": {
+                            "type": "string",
+                            "enum": legal,
+                        },
+                        "arguments": {
+                            "type": "object",
+                        },
+                        "rationale": {
+                            "type": "string",
+                            "minLength": 3,
+                            "maxLength": 1000,
+                        },
+                    },
+                    "required": ["tool", "arguments", "rationale"],
+                },
+            },
+            "required": ["reasoning_summary", "plan", "action"],
+        }
+
+    @classmethod
+    def _system_prompt(cls) -> str:
         return (
-            "You are the no-reflection tool-selection policy for a bounded Python "
-            "repair agent. Choose exactly one next action from the restricted tool "
-            "contract. The runtime, not you, validates and executes the action. "
-            "Never edit tests or forbidden paths. Prefer evidence-gathering before "
-            "patching. Use a minimal unified diff for apply_patch. After every "
-            "successful patch, choose check_syntax before tests. The runtime "
-            "transactionally rolls back the active attempt after failed syntax "
-            "or test verification. Do not propose another patch until the current "
-            "attempt has passed the full suite or has been rolled back. Do not "
-            "report success until a full test run has passed for the current "
-            "revision. "
-            "The reflection field must be null because this policy is the "
-            "no-reflection ablation. Return only one JSON object matching the "
-            "provided schema. Do not use markdown.\n\n"
-            f"RESTRICTED TOOL CONTRACT:\n{tool_contract}"
+            "You are a bounded Python repair tool-selection policy. The JSON "
+            "schema restricts action.tool to legal choices for the current state. "
+            "Available tools include list_files, read_file, search_code, run_tests, "
+            "apply_patch, check_syntax, view_diff, restore_file, and finish. "
+            "Never invent repository evidence, edit tests, or use forbidden paths. "
+            "After every successful patch choose check_syntax before tests. "
+            "Use apply_patch only after reading relevant source. Never claim "
+            "success until the current revision passes the full suite. "
+            "Set reflection to null. Return JSON only."
         )
 
     @classmethod
     def _trajectory(cls, state: AgentState) -> str:
+        """Return a compact recent action-observation trajectory."""
         pairs = list(
             zip(
                 state.actions,
@@ -146,15 +208,14 @@ class LLMToolPolicy:
         )
         recent = pairs[-cls._MAX_HISTORY_ITEMS :]
         if not recent:
-            return "No actions have been executed yet."
+            return "none"
 
         records: list[dict[str, Any]] = []
         start_index = len(pairs) - len(recent) + 1
         for offset, (action, observation) in enumerate(recent):
-            observation_data = observation.model_dump(mode="json")
-            output = str(observation_data.get("output", ""))
+            output = observation.output
             if len(output) > cls._MAX_OBSERVATION_OUTPUT:
-                observation_data["output"] = (
+                output = (
                     output[: cls._MAX_OBSERVATION_OUTPUT]
                     + "\n...[observation output truncated]"
                 )
@@ -162,44 +223,125 @@ class LLMToolPolicy:
             records.append(
                 {
                     "step": start_index + offset,
-                    "action": action.model_dump(mode="json"),
-                    "observation": observation_data,
+                    "tool": action.tool.value,
+                    "arguments": action.arguments,
+                    "status": observation.status.value,
+                    "summary": observation.summary,
+                    "output": output,
                 }
             )
 
-        return json.dumps(records, indent=2, sort_keys=True)
+        return json.dumps(
+            records,
+            sort_keys=True,
+        )
+
+    @classmethod
+    def _legal_actions(
+        cls,
+        state: AgentState | None,
+    ) -> list[str]:
+        """Return evidence-sensitive actions while retaining bounded choice."""
+        if state is None:
+            return [tool.value for tool in ToolName]
+        if state.rollback_required:
+            return []
+        if state.syntax_check_required:
+            return [ToolName.CHECK_SYNTAX.value]
+        if not state.actions or not state.observations:
+            return [ToolName.RUN_TESTS.value]
+
+        last_action = state.actions[-1]
+        last_observation = state.observations[-1]
+        candidates: list[ToolName]
+
+        if last_action.tool is ToolName.RUN_TESTS:
+            if last_observation.status is ObservationStatus.OK:
+                candidates = [ToolName.FINISH]
+            else:
+                candidates = [
+                    ToolName.SEARCH_CODE,
+                    ToolName.LIST_FILES,
+                    ToolName.READ_FILE,
+                ]
+        elif last_action.tool is ToolName.SEARCH_CODE:
+            candidates = (
+                [ToolName.READ_FILE, ToolName.LIST_FILES]
+                if last_observation.status is ObservationStatus.OK
+                else [ToolName.LIST_FILES, ToolName.READ_FILE]
+            )
+        elif last_action.tool is ToolName.LIST_FILES:
+            candidates = [
+                ToolName.READ_FILE,
+                ToolName.SEARCH_CODE,
+                ToolName.RUN_TESTS,
+            ]
+        elif last_action.tool is ToolName.READ_FILE:
+            candidates = (
+                [ToolName.APPLY_PATCH, ToolName.SEARCH_CODE]
+                if last_observation.status is ObservationStatus.OK
+                else [ToolName.SEARCH_CODE, ToolName.LIST_FILES]
+            )
+        elif last_action.tool is ToolName.APPLY_PATCH:
+            candidates = (
+                [ToolName.CHECK_SYNTAX]
+                if last_observation.status is ObservationStatus.OK
+                else [ToolName.READ_FILE, ToolName.VIEW_DIFF]
+            )
+        elif last_action.tool is ToolName.CHECK_SYNTAX:
+            candidates = (
+                [ToolName.RUN_TESTS]
+                if last_observation.status is ObservationStatus.OK
+                else [ToolName.READ_FILE, ToolName.VIEW_DIFF]
+            )
+        elif last_action.tool is ToolName.RESTORE_FILE:
+            candidates = [ToolName.READ_FILE, ToolName.SEARCH_CODE]
+        elif last_action.tool is ToolName.VIEW_DIFF:
+            candidates = (
+                [ToolName.CHECK_SYNTAX]
+                if state.syntax_check_required
+                else [ToolName.APPLY_PATCH, ToolName.RUN_TESTS]
+            )
+        else:
+            candidates = [ToolName.FINISH]
+
+        recent_tools = {action.tool for action in state.actions[-2:]}
+        filtered = [tool for tool in candidates if tool not in recent_tools]
+        if filtered:
+            candidates = filtered
+
+        if not state.changed_files and state.current_attempt_id is None:
+            candidates = [
+                tool for tool in candidates if tool is not ToolName.RESTORE_FILE
+            ]
+
+        return [tool.value for tool in candidates]
 
     @classmethod
     def _state_prompt(cls, state: AgentState) -> str:
+        """Return compact state while preserving diagnostic trace fields."""
         remaining = {
             "steps": max(
                 state.budget.max_steps - state.usage.steps,
                 0,
             ),
-            "tool_calls": max(
+            "tools": max(
                 state.budget.max_tool_calls - state.usage.tool_calls,
                 0,
             ),
-            "patch_attempts": max(
+            "patches": max(
                 state.budget.max_patch_attempts - state.usage.patch_attempts,
                 0,
-            ),
-            "seconds": max(
-                state.budget.max_seconds - state.usage.elapsed_seconds,
-                0.0,
             ),
         }
         state_summary = {
             "task_id": state.task.task_id,
             "goal": state.task.goal,
-            "test_command": state.task.test_command,
             "allowed_paths": state.task.allowed_paths,
             "forbidden_paths": state.task.forbidden_paths,
             "status": state.status.value,
-            "remaining_budget": remaining,
-            "current_plan": state.plan,
-            "current_hypothesis": state.current_hypothesis,
-            "rejected_hypotheses": state.rejected_hypotheses[-5:],
+            "legal_actions": cls._legal_actions(state),
+            "remaining": remaining,
             "changed_files": state.changed_files,
             "repository_revision": state.repository_revision,
             "syntax_verified_revision": state.syntax_verified_revision,
@@ -209,26 +351,28 @@ class LLMToolPolicy:
             "rollback_required": state.rollback_required,
             "last_failed_attempt_id": state.last_failed_attempt_id,
             "last_failed_attempt_files": state.last_failed_attempt_files,
+            "last_rolled_back_attempt_id": state.last_rolled_back_attempt_id,
+            "last_rolled_back_attempt_files": (state.last_rolled_back_attempt_files),
+            "current_hypothesis": state.current_hypothesis,
             "last_failed_verification_tool": (
                 state.last_failed_verification_tool.value
                 if state.last_failed_verification_tool is not None
                 else None
             ),
-            "last_rolled_back_attempt_id": (state.last_rolled_back_attempt_id),
-            "last_rolled_back_attempt_files": (state.last_rolled_back_attempt_files),
             "reflection_required": state.reflection_required,
             "verified_revision": state.verified_revision,
             "full_suite_passed": state.full_suite_passed,
         }
         return (
             "CURRENT REPAIR STATE:\n"
-            f"{json.dumps(state_summary, indent=2, sort_keys=True)}\n\n"
-            "RECENT ACTION-OBSERVATION TRAJECTORY:\n"
-            f"{cls._trajectory(state)}\n\n"
-            "Choose the single best next tool action. Include a concise plan, "
-            "reasoning summary, optional current hypothesis, and one action "
-            "with valid arguments.\n"
-            f"{cls._reflection_instruction(state)}"
+            + json.dumps(
+                state_summary,
+                sort_keys=True,
+            )
+            + "\nRECENT ACTION-OBSERVATION TRAJECTORY:\n"
+            + cls._trajectory(state)
+            + "\nChoose one action from legal_actions. Use only observed "
+            "evidence and valid tool arguments. " + cls._reflection_instruction(state)
         )
 
     @classmethod
@@ -276,18 +420,93 @@ class LLMToolPolicy:
 
         try:
             payload = json.loads(candidate)
-            decision = AgentDecision.model_validate(payload)
-        except (json.JSONDecodeError, ValidationError) as exc:
+        except json.JSONDecodeError as exc:
             raise PolicyResponseError(
                 f"Model decision failed schema validation: {exc}",
                 raw_response=raw_response,
             ) from exc
 
-        if not decision.plan:
+        if not isinstance(payload, dict):
+            raise PolicyResponseError(
+                "Model decision must be a JSON object.",
+                raw_response=raw_response,
+            )
+
+        plan = payload.get("plan")
+        if not isinstance(plan, list) or not plan:
             raise PolicyResponseError(
                 "Model decision must contain at least one plan step.",
                 raw_response=raw_response,
             )
+
+        try:
+            decision = AgentDecision.model_validate(payload)
+        except ValidationError as exc:
+            raise PolicyResponseError(
+                f"Model decision failed schema validation: {exc}",
+                raw_response=raw_response,
+            ) from exc
+
+        return decision
+
+    @classmethod
+    def _validate_common_decision(
+        cls,
+        state: AgentState,
+        decision: AgentDecision,
+        raw_response: str,
+    ) -> AgentDecision:
+        """Reject actions outside the current evidence-sensitive legal set."""
+        if state.rollback_required:
+            raise PolicyResponseError(
+                "Runtime transactional rollback must complete before another "
+                "model-directed decision.",
+                raw_response=raw_response,
+            )
+
+        action = decision.action
+        tool = action.tool
+
+        if (
+            not state.actions
+            and not state.syntax_check_required
+            and tool is not ToolName.RUN_TESTS
+        ):
+            raise PolicyResponseError(
+                "The first action must be run_tests to establish executable "
+                "failure evidence.",
+                raw_response=raw_response,
+            )
+
+        if state.actions:
+            previous = state.actions[-1]
+            if previous.tool is tool and previous.arguments == action.arguments:
+                raise PolicyResponseError(
+                    "The proposed action exactly repeats the latest action "
+                    "without new repository or verification evidence.",
+                    raw_response=raw_response,
+                )
+
+        legal = cls._legal_actions(state)
+        if tool.value not in legal:
+            rendered = ", ".join(legal) or "<none>"
+            raise PolicyResponseError(
+                f"Tool {tool.value} is not currently legal. Choose one of: {rendered}.",
+                raw_response=raw_response,
+            )
+
+        if tool is ToolName.FINISH:
+            status = action.arguments.get("status")
+            verified_current_revision = (
+                state.full_suite_passed
+                and state.verified_revision == state.repository_revision
+            )
+            if status == "succeeded" and not verified_current_revision:
+                raise PolicyResponseError(
+                    "finish status succeeded requires a passing full suite "
+                    "for the current repository revision.",
+                    raw_response=raw_response,
+                )
 
         return decision
 
@@ -297,27 +516,24 @@ class LLMToolPolicy:
         decision: AgentDecision,
         raw_response: str,
     ) -> AgentDecision:
-        """Apply policy-mode rules after shared schema validation."""
-        if state.rollback_required:
-            raise PolicyResponseError(
-                "Runtime transactional rollback must complete before another "
-                "model-directed decision.",
-                raw_response=raw_response,
-            )
-
+        """Apply no-reflection rules before shared semantic validation."""
         if decision.reflection is not None:
             raise PolicyResponseError(
                 "The no-reflection policy requires reflection to be null.",
                 raw_response=raw_response,
             )
 
-        return decision
+        return self._validate_common_decision(
+            state,
+            decision,
+            raw_response,
+        )
 
     def decide(self, state: AgentState) -> AgentDecision:
-        """Ask the model to select and justify one restricted tool action."""
+        """Ask the model for one schema-constrained legal action."""
         system_prompt = self._system_prompt()
         base_prompt = self._state_prompt(state)
-        response_schema = AgentDecision.model_json_schema()
+        response_schema = self._decision_response_schema(state)
         user_prompt = base_prompt
 
         for attempt in range(1, self.max_parse_attempts + 1):
@@ -360,13 +576,15 @@ class LLMToolPolicy:
                         raw_response=raw_response,
                     ) from exc
 
+                legal = ", ".join(self._legal_actions(state))
                 user_prompt = (
                     base_prompt
-                    + "\n\nCORRECTION REQUIRED:\n"
+                    + "\nCORRECTION REQUIRED:"
                     + str(exc)
-                    + "\nReturn a corrected JSON decision only. "
-                    + "Previous invalid response:\n"
-                    + raw_response[: self._MAX_RAW_RESPONSE]
+                    + "\nLEGAL ACTIONS NOW:"
+                    + legal
+                    + "\nReturn different valid JSON only. Previous "
+                    "invalid response:" + raw_response[: self._MAX_RAW_RESPONSE]
                 )
 
         raise AssertionError("Unreachable model-decision loop.")

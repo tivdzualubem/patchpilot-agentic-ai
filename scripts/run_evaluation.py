@@ -421,9 +421,11 @@ def main() -> None:
         limit=args.limit,
     )
     conditions = selected_conditions(args.condition)
-    configured = [
-        build_condition(condition, build_model(args)) for condition in conditions
-    ]
+    model = build_model(args)
+    print("MODEL_WARMUP=starting")
+    model.warmup()
+    print("MODEL_WARMUP=complete")
+    configured = [build_condition(condition, model) for condition in conditions]
 
     write_json(
         result_root / "experiment_config.json",

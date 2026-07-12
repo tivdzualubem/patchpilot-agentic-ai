@@ -99,8 +99,8 @@ def test_model_selects_first_tool_and_receives_decision_schema() -> None:
     model = ScriptedModel(
         [
             decision_json(
-                tool="list_files",
-                arguments={"relative_path": "src"},
+                tool="run_tests",
+                arguments={},
             )
         ]
     )
@@ -109,8 +109,8 @@ def test_model_selects_first_tool_and_receives_decision_schema() -> None:
     decision = policy.decide(AgentState(task=make_task()))
 
     assert model.calls == 1
-    assert decision.action.tool is ToolName.LIST_FILES
-    assert decision.action.arguments == {"relative_path": "src"}
+    assert decision.action.tool is ToolName.RUN_TESTS
+    assert decision.action.arguments == {}
     assert model.response_schemas[0] is not None
     assert "properties" in model.response_schemas[0]
     assert "list_files" in model.system_prompts[0]

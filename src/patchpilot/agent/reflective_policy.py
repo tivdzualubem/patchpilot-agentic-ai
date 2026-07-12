@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 from patchpilot.agent.llm_policy import PolicyResponseError
 from patchpilot.agent.llm_tool_policy import LLMToolPolicy
 from patchpilot.agent.policy import AgentDecision
@@ -19,26 +17,18 @@ class ReflectiveLLMToolPolicy(LLMToolPolicy):
 
     @classmethod
     def _system_prompt(cls) -> str:
-        tool_contract = json.dumps(
-            cls._TOOL_CONTRACT,
-            indent=2,
-            sort_keys=True,
-        )
         return (
-            "You are the reflective tool-selection policy for a bounded Python "
-            "repair agent. Choose exactly one next action from the restricted "
-            "tool contract. The runtime validates and executes every action. "
-            "Never edit tests or forbidden paths. Prefer evidence-gathering "
-            "before patching. Use a minimal unified diff for apply_patch. Do "
-            "not report success until a full test run has passed for the current "
-            "revision. Run check_syntax after every successful patch and before "
-            "tests. The runtime transactionally rolls back the active attempt "
-            "after failed syntax or test verification. Normally set reflection "
-            "to null. After a failed attempt has been rolled back, provide a "
-            "concise critique of the previous hypothesis and a revised hypothesis "
-            "before continuing. Return only one JSON "
-            "object matching the provided schema. Do not use markdown.\n\n"
-            f"RESTRICTED TOOL CONTRACT:\n{tool_contract}"
+            "You are a bounded reflective Python repair tool-selection "
+            "policy. The JSON schema restricts action.tool to currently "
+            "legal choices. Available tools include list_files, read_file, "
+            "search_code, run_tests, apply_patch, check_syntax, view_diff, "
+            "restore_file, and finish. Never invent evidence, edit tests, "
+            "or use forbidden paths. After every successful patch choose "
+            "check_syntax before tests. The runtime transactionally rolls "
+            "back failed verified attempts. Normally set reflection to null. "
+            "When reflection is required, critique the failed hypothesis and "
+            "provide a revised hypothesis. Never claim success until the "
+            "current revision passes the full suite. Return JSON only."
         )
 
     @classmethod
@@ -62,20 +52,21 @@ class ReflectiveLLMToolPolicy(LLMToolPolicy):
         decision: AgentDecision,
         raw_response: str,
     ) -> AgentDecision:
-        if state.rollback_required:
+        required = self._reflection_required(state)
+
+        if not required and decision.reflection is not None:
             raise PolicyResponseError(
-                "Runtime transactional rollback must complete before reflection.",
+                "Reflection is only allowed after failed post-patch verification.",
                 raw_response=raw_response,
             )
 
-        required = self._reflection_required(state)
+        decision = self._validate_common_decision(
+            state,
+            decision,
+            raw_response,
+        )
 
         if not required:
-            if decision.reflection is not None:
-                raise PolicyResponseError(
-                    "Reflection is only allowed after failed post-patch verification.",
-                    raw_response=raw_response,
-                )
             return decision
 
         if decision.action.tool is ToolName.RESTORE_FILE:

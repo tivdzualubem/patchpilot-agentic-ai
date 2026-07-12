@@ -21,4 +21,8 @@ def test_ollama_trace_metadata_reports_generation_configuration() -> None:
         "temperature": 0.2,
         "seed": 7,
         "max_tokens": 1024,
+        "context_window": 4096,
+        "keep_alive": "30m",
+        "structured_token_cap": 256,
+        "unstructured_token_cap": 384,
     }

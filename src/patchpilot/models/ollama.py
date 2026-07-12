@@ -14,6 +14,11 @@ class OllamaModelError(RuntimeError):
 class OllamaChatModel:
     """Generate deterministic structured decisions through Ollama."""
 
+    _CONTEXT_WINDOW = 4096
+    _KEEP_ALIVE = "30m"
+    _STRUCTURED_TOKEN_CAP = 256
+    _UNSTRUCTURED_TOKEN_CAP = 384
+
     def __init__(
         self,
         model: str = "qwen2.5-coder:3b",
@@ -43,7 +48,7 @@ class OllamaChatModel:
         self.max_tokens = max_tokens
 
     def trace_metadata(self) -> dict[str, object]:
-        """Return stable backend identity and reproducible generation options."""
+        """Return stable backend identity and generation configuration."""
         return {
             "backend": "ollama",
             "model": self.model,
@@ -52,58 +57,20 @@ class OllamaChatModel:
             "temperature": self.temperature,
             "seed": self.seed,
             "max_tokens": self.max_tokens,
+            "context_window": self._CONTEXT_WINDOW,
+            "keep_alive": self._KEEP_ALIVE,
+            "structured_token_cap": min(
+                self.max_tokens,
+                self._STRUCTURED_TOKEN_CAP,
+            ),
+            "unstructured_token_cap": min(
+                self.max_tokens,
+                self._UNSTRUCTURED_TOKEN_CAP,
+            ),
         }
 
-    def generate(
-        self,
-        system_prompt: str,
-        user_prompt: str,
-        response_schema: dict[str, object] | None = None,
-    ) -> str:
-        """Return one non-streaming JSON-mode chat response."""
-        payload: dict[str, object] = {
-            "model": self.model,
-            "stream": False,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": system_prompt,
-                },
-                {
-                    "role": "user",
-                    "content": user_prompt,
-                },
-            ],
-            "options": {
-                "temperature": self.temperature,
-                "seed": self.seed,
-                "num_predict": self.max_tokens,
-            },
-        }
-
-        if response_schema is not None:
-            try:
-                schema_text = json.dumps(
-                    response_schema,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                )
-            except (TypeError, ValueError) as exc:
-                raise ValueError("response_schema must be JSON-serializable.") from exc
-
-            payload["format"] = response_schema
-            messages = payload["messages"]
-            if not isinstance(messages, list):
-                raise AssertionError("Ollama messages payload must be a list.")
-
-            user_message = messages[-1]
-            if not isinstance(user_message, dict):
-                raise AssertionError("Ollama user message must be an object.")
-
-            user_message["content"] = (
-                f"{user_prompt}\n\nRESPONSE JSON SCHEMA:\n{schema_text}"
-            )
-
+    def _send(self, payload: dict[str, object]) -> str:
+        """Send one non-streaming Ollama chat payload."""
         request = Request(
             f"{self.base_url}/api/chat",
             data=json.dumps(payload).encode("utf-8"),
@@ -139,3 +106,71 @@ class OllamaChatModel:
             raise OllamaModelError("Ollama returned empty generated content.")
 
         return content.strip()
+
+    def warmup(self) -> None:
+        """Load and retain the model before timed evaluation runs."""
+        payload: dict[str, object] = {
+            "model": self.model,
+            "stream": False,
+            "keep_alive": self._KEEP_ALIVE,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Reply with exactly OK.",
+                },
+                {
+                    "role": "user",
+                    "content": "OK",
+                },
+            ],
+            "options": {
+                "temperature": 0.0,
+                "seed": self.seed,
+                "num_predict": 1,
+                "num_ctx": self._CONTEXT_WINDOW,
+            },
+        }
+        self._send(payload)
+
+    def generate(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        response_schema: dict[str, object] | None = None,
+    ) -> str:
+        """Return one bounded non-streaming chat response."""
+        cap = (
+            self._STRUCTURED_TOKEN_CAP
+            if response_schema is not None
+            else self._UNSTRUCTURED_TOKEN_CAP
+        )
+        payload: dict[str, object] = {
+            "model": self.model,
+            "stream": False,
+            "keep_alive": self._KEEP_ALIVE,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt,
+                },
+            ],
+            "options": {
+                "temperature": self.temperature,
+                "seed": self.seed,
+                "num_predict": min(self.max_tokens, cap),
+                "num_ctx": self._CONTEXT_WINDOW,
+            },
+        }
+
+        if response_schema is not None:
+            try:
+                json.dumps(response_schema)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("response_schema must be JSON-serializable.") from exc
+            payload["format"] = response_schema
+
+        return self._send(payload)

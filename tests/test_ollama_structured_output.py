@@ -85,15 +85,8 @@ def test_json_schema_is_sent_as_ollama_format(
     assert payload["format"] == schema
     assert payload["stream"] is False
     assert payload["messages"][-1]["role"] == "user"
-    assert "RESPONSE JSON SCHEMA:" in payload["messages"][-1]["content"]
-    assert (
-        json.dumps(
-            schema,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-        in payload["messages"][-1]["content"]
-    )
+    assert payload["messages"][-1]["content"] == "user prompt"
+    assert "RESPONSE JSON SCHEMA:" not in payload["messages"][-1]["content"]
     assert json.loads(result)["tool"] == "run_tests"
 
 
