@@ -83,6 +83,35 @@ class _FinishArguments(_Arguments):
     message: str = Field(min_length=3, max_length=2000)
 
 
+_TOOL_ARGUMENT_MODELS: dict[ToolName, type[_Arguments]] = {
+    ToolName.LIST_FILES: _ListFilesArguments,
+    ToolName.READ_FILE: _ReadFileArguments,
+    ToolName.SEARCH_CODE: _SearchCodeArguments,
+    ToolName.RUN_TESTS: _RunTestsArguments,
+    ToolName.CHECK_SYNTAX: _CheckSyntaxArguments,
+    ToolName.APPLY_PATCH: _ApplyPatchArguments,
+    ToolName.VIEW_DIFF: _ViewDiffArguments,
+    ToolName.RESTORE_FILE: _RestoreFileArguments,
+    ToolName.FINISH: _FinishArguments,
+}
+
+
+def tool_argument_schema(tool: ToolName) -> dict[str, object]:
+    """Return the exact executor argument schema for one tool."""
+    schema = dict(_TOOL_ARGUMENT_MODELS[tool].model_json_schema())
+    schema.pop("title", None)
+    return schema
+
+
+def validate_tool_arguments(
+    tool: ToolName,
+    arguments: dict[str, object],
+) -> dict[str, object]:
+    """Validate arguments with the same model used by the executor."""
+    validated = _TOOL_ARGUMENT_MODELS[tool].model_validate(arguments)
+    return validated.model_dump(exclude_none=True, exclude_unset=True)
+
+
 class VerificationMode(StrEnum):
     """Runtime enforcement mode used by verification ablations."""
 

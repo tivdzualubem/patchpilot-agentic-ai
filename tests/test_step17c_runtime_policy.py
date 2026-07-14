@@ -249,7 +249,7 @@ def test_evaluation_warms_and_reuses_one_model() -> None:
 
 
 def test_schema_validation_rejects_non_legal_tool() -> None:
-    state = read_after_search_state()
+    state = failed_test_state()
     raw = decision_json("restore_file")
 
     with pytest.raises(PolicyResponseError, match="not currently legal"):
