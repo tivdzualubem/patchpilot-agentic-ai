@@ -70,10 +70,7 @@ def test_budget_usage_detects_exhaustion() -> None:
     assert BudgetUsage(steps=3).exhausted(budget) is True
     assert BudgetUsage(tool_calls=5).exhausted(budget) is True
     assert BudgetUsage(patch_attempts=2).exhausted(budget) is False
-    assert (
-        BudgetUsage(patch_attempts=2).patch_limit_reached(budget)
-        is True
-    )
+    assert BudgetUsage(patch_attempts=2).patch_limit_reached(budget) is True
     assert BudgetUsage(elapsed_seconds=60).exhausted(budget) is True
 
 
@@ -104,3 +101,44 @@ def test_terminal_agent_state_cannot_continue() -> None:
     )
 
     assert state.can_continue is False
+
+
+def test_syntax_gate_tracks_current_repository_revision() -> None:
+    state = AgentState(task=build_task())
+    state.changed_files = ["src/example.py"]
+    state.repository_revision = 2
+
+    assert state.syntax_check_required is True
+
+    state.syntax_verified_revision = 2
+
+    assert state.syntax_check_required is False
+
+
+def test_non_python_changes_do_not_require_python_syntax_check() -> None:
+    state = AgentState(task=build_task())
+    state.changed_files = ["src/config.json"]
+    state.repository_revision = 1
+
+    assert state.syntax_check_required is False
+
+
+def test_failed_attempt_requires_reflection_until_recorded() -> None:
+    state = AgentState(task=build_task())
+    state.last_failed_attempt_id = 4
+
+    assert state.reflection_required is True
+
+    state.last_reflected_attempt_id = 4
+
+    assert state.reflection_required is False
+
+
+def test_transactional_attempt_state_defaults_are_empty() -> None:
+    state = AgentState(task=build_task())
+
+    assert state.current_attempt_id is None
+    assert state.current_attempt_files == []
+    assert state.rollback_required is False
+    assert state.last_failed_attempt_id is None
+    assert state.last_rolled_back_attempt_id is None

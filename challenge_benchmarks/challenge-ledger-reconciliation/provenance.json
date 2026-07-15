@@ -1,0 +1,41 @@
+{
+  "changed_line_count": 22,
+  "clean_reference_validation": {
+    "hidden_passed": true,
+    "hidden_returncode": 0,
+    "visible_passed": true,
+    "visible_returncode": 0
+  },
+  "clean_source_sha256": "1727cf7b3f72620c04e101e7e1af86789ddbca0e960e59ed4672b028460036e7",
+  "defect_category": "idempotent_financial_state",
+  "defect_diff": "--- a/src/ledger.py\n+++ b/src/ledger.py\n@@ -19,24 +19,14 @@\n     transfers: Iterable[Transfer],\n ) -> dict[str, int]:\n     \"\"\"Apply unique positive transfers without mutating input balances.\"\"\"\n-    pending = list(transfers)\n+    result = balances\n     seen: set[str] = set()\n \n-    for transfer in pending:\n-        if transfer.amount <= 0:\n+    for transfer in transfers:\n+        if transfer.amount < 0:\n             raise ValueError(\"transfer amount must be positive\")\n-        if transfer.source not in balances or transfer.destination not in balances:\n-            raise KeyError(\"unknown account\")\n-        if transfer.transaction_id in seen:\n-            continue\n+        if transfer.destination not in result:\n+            result[transfer.destination] = 0\n+        result[transfer.destination] += transfer.amount\n         seen.add(transfer.transaction_id)\n-\n-    result = dict(balances)\n-    seen.clear()\n-    for transfer in pending:\n-        if transfer.transaction_id in seen:\n-            continue\n-        seen.add(transfer.transaction_id)\n-        result[transfer.source] -= transfer.amount\n-        result[transfer.destination] += transfer.amount\n     return result\n",
+  "defect_patterns": [
+    "duplicate_processing",
+    "one_sided_transfer",
+    "partial_mutation"
+  ],
+  "defective_source_sha256": "3f3877178ab5179d56bc5cd6d7ddf37f7017650b679e32d6c176e92ab2c2543d",
+  "difficulty": "hard",
+  "generation": {
+    "command": "python scripts/create_manual_challenges.py --force --timeout-seconds 60",
+    "deterministic": true,
+    "script": "scripts/create_manual_challenges.py"
+  },
+  "hidden_tests_tree_sha256": "c11fe501fc35f8fc1c580bffb8b01d594b814f0bb55ab23b2aef7c93730edf9a",
+  "hidden_validation": {
+    "collected_tests": 3,
+    "failed": 3,
+    "returncode": 1
+  },
+  "origin_type": "manual_challenge",
+  "rationale": "Requires transaction validation, idempotency, two-sided updates, and copy-on-write semantics.",
+  "repository_tree_sha256": "a954fe02c3cc0f0e628c0b7ac0fc15c3f36a4455eac31c38d02fe18817143905",
+  "schema_version": "1.0",
+  "selection_rank": 8,
+  "source_file": "src/ledger.py",
+  "task_id": "challenge-ledger-reconciliation",
+  "visible_validation": {
+    "failed": 3,
+    "returncode": 1
+  }
+}

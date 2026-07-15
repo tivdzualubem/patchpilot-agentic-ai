@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "17f5ce8313fb4ab4d9a9dbbbc11b2360f8224c1d7a62168f0f22828824a56ee1",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "5ff03c97b758f536206b54ace923d1de7a661d8b12d5c7a3f91bbae09b408f43",
+  "mutant_name": "mutmut_textdata.core.x_longest_common_prefix__mutmut_11",
+  "mutant_status": "killed",
+  "mutated_function": "longest_common_prefix",
+  "operator_family": "arithmetic",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

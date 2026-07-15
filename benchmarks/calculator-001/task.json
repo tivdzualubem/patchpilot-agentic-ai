@@ -5,8 +5,19 @@
   "repository_root": "benchmarks/calculator-001/repository",
   "defect_category": "wrong_binary_operator",
   "difficulty": "easy",
-  "allowed_paths": ["src"],
-  "forbidden_paths": ["tests"],
-  "test_command": ["python", "-m", "pytest", "-q"],
-  "expected_initial_failures": 2
+  "allowed_paths": [
+    "src"
+  ],
+  "forbidden_paths": [
+    "tests"
+  ],
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "expected_initial_failures": 2,
+  "hidden_test_root": "benchmarks/calculator-001/hidden_tests",
+  "expected_hidden_tests": 2
 }

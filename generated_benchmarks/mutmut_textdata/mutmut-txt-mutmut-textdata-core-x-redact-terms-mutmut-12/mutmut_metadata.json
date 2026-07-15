@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "1cfcfaa56640c59916d6e392145138ade84f3a8f03761b173744c8e268209514",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "5ff03c97b758f536206b54ace923d1de7a661d8b12d5c7a3f91bbae09b408f43",
+  "mutant_name": "mutmut_textdata.core.x_redact_terms__mutmut_12",
+  "mutant_status": "killed",
+  "mutated_function": "redact_terms",
+  "operator_family": "arithmetic",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
 from time import perf_counter
 from typing import Literal
@@ -12,13 +13,19 @@ from patchpilot.agent.loop_guard import RepeatedActionGuard
 from patchpilot.schemas import (
     AgentState,
     AgentStatus,
+    FailureCategory,
     ObservationStatus,
     RepairTask,
     ToolAction,
     ToolName,
     ToolObservation,
 )
-from patchpilot.tools import PatchManager, RepositorySandbox, TestRunner
+from patchpilot.tools import (
+    PatchManager,
+    RepositorySandbox,
+    SyntaxChecker,
+    TestRunner,
+)
 
 
 class _Arguments(BaseModel):
@@ -50,6 +57,10 @@ class _RunTestsArguments(_Arguments):
     target: str | None = None
 
 
+class _CheckSyntaxArguments(_Arguments):
+    pass
+
+
 class _ApplyPatchArguments(_Arguments):
     model_config = ConfigDict(
         extra="forbid",
@@ -72,6 +83,42 @@ class _FinishArguments(_Arguments):
     message: str = Field(min_length=3, max_length=2000)
 
 
+_TOOL_ARGUMENT_MODELS: dict[ToolName, type[_Arguments]] = {
+    ToolName.LIST_FILES: _ListFilesArguments,
+    ToolName.READ_FILE: _ReadFileArguments,
+    ToolName.SEARCH_CODE: _SearchCodeArguments,
+    ToolName.RUN_TESTS: _RunTestsArguments,
+    ToolName.CHECK_SYNTAX: _CheckSyntaxArguments,
+    ToolName.APPLY_PATCH: _ApplyPatchArguments,
+    ToolName.VIEW_DIFF: _ViewDiffArguments,
+    ToolName.RESTORE_FILE: _RestoreFileArguments,
+    ToolName.FINISH: _FinishArguments,
+}
+
+
+def tool_argument_schema(tool: ToolName) -> dict[str, object]:
+    """Return the exact executor argument schema for one tool."""
+    schema = dict(_TOOL_ARGUMENT_MODELS[tool].model_json_schema())
+    schema.pop("title", None)
+    return schema
+
+
+def validate_tool_arguments(
+    tool: ToolName,
+    arguments: dict[str, object],
+) -> dict[str, object]:
+    """Validate arguments with the same model used by the executor."""
+    validated = _TOOL_ARGUMENT_MODELS[tool].model_validate(arguments)
+    return validated.model_dump(exclude_none=True, exclude_unset=True)
+
+
+class VerificationMode(StrEnum):
+    """Runtime enforcement mode used by verification ablations."""
+
+    STRICT = "strict"
+    DISABLED = "disabled"
+
+
 _TERMINAL_STATES = {
     AgentStatus.SUCCEEDED,
     AgentStatus.FAILED,
@@ -89,6 +136,7 @@ class AgentToolExecutor:
         task: RepairTask,
         test_timeout_seconds: int = 60,
         repeated_action_guard: RepeatedActionGuard | None = None,
+        verification_mode: VerificationMode = VerificationMode.STRICT,
     ) -> None:
         self.sandbox = RepositorySandbox(workspace_root, task)
         self.test_runner = TestRunner(
@@ -97,7 +145,9 @@ class AgentToolExecutor:
             timeout_seconds=test_timeout_seconds,
         )
         self.patch_manager = PatchManager(self.sandbox, task)
+        self.syntax_checker = SyntaxChecker(self.sandbox)
         self.repeated_action_guard = repeated_action_guard or RepeatedActionGuard()
+        self.verification_mode = VerificationMode(verification_mode)
         self._started_at = perf_counter()
 
     @staticmethod
@@ -124,6 +174,7 @@ class AgentToolExecutor:
         """Append an action-observation pair to the trajectory."""
         state.actions.append(action)
         state.observations.append(observation)
+        self.repeated_action_guard.record_progress(state)
         state.usage.elapsed_seconds = perf_counter() - self._started_at
         return observation
 
@@ -132,6 +183,41 @@ class AgentToolExecutor:
         """Invalidate test evidence after a repository mutation."""
         state.full_suite_passed = False
         state.verified_revision = None
+
+    @staticmethod
+    def _update_syntax_gate(state: AgentState) -> None:
+        """Require fresh syntax evidence for the current changed Python files."""
+        if any(Path(path).suffix == ".py" for path in state.changed_files):
+            state.syntax_verified_revision = None
+        else:
+            state.syntax_verified_revision = state.repository_revision
+
+    @staticmethod
+    def _clear_current_attempt(state: AgentState) -> None:
+        """Clear active-attempt state after acceptance or rollback."""
+        state.current_attempt_id = None
+        state.current_attempt_files = []
+
+    def _sync_current_attempt(self, state: AgentState) -> None:
+        """Synchronize state with the patch manager's active attempt."""
+        state.current_attempt_id = self.patch_manager.current_attempt_id
+        state.current_attempt_files = list(self.patch_manager.current_attempt_files)
+
+    @staticmethod
+    def _mark_failed_attempt(
+        state: AgentState,
+        verification_tool: ToolName,
+    ) -> None:
+        """Require rollback for the active attempt after failed verification."""
+        if state.current_attempt_id is None:
+            return
+
+        state.rollback_required = True
+        state.last_failed_attempt_id = state.current_attempt_id
+        state.last_failed_attempt_files = list(state.current_attempt_files)
+        state.last_failed_verification_tool = verification_tool
+        if state.current_attempt_id not in state.failed_attempt_ids:
+            state.failed_attempt_ids.append(state.current_attempt_id)
 
     def _reject(
         self,
@@ -166,26 +252,59 @@ class AgentToolExecutor:
             )
 
         if arguments.status == "succeeded":
-            verified = (
-                state.full_suite_passed
-                and state.verified_revision == state.repository_revision
-            )
-
-            if not verified:
+            if state.rollback_required:
                 return self._reject(
                     state,
                     action,
-                    "Success requires a passing full test suite "
-                    "for the current repository revision.",
+                    "Success is blocked until the failed patch attempt is "
+                    "transactionally rolled back.",
                 )
 
+            if self.verification_mode is VerificationMode.STRICT:
+                if state.syntax_check_required:
+                    return self._reject(
+                        state,
+                        action,
+                        "Success requires a passing syntax check for the current "
+                        "repository revision.",
+                    )
+
+                if state.current_attempt_id is not None:
+                    return self._reject(
+                        state,
+                        action,
+                        "Success requires full-suite acceptance of the current "
+                        "patch attempt.",
+                    )
+
+                verified = (
+                    state.full_suite_passed
+                    and state.verified_revision == state.repository_revision
+                )
+
+                if not verified:
+                    return self._reject(
+                        state,
+                        action,
+                        "Success requires a passing full test suite "
+                        "for the current repository revision.",
+                    )
+            elif state.current_attempt_id is not None:
+                self.patch_manager.accept_attempt(state.current_attempt_id)
+                self._clear_current_attempt(state)
+
             state.status = AgentStatus.SUCCEEDED
+            state.terminal_failure_category = None
 
         elif arguments.status == "failed":
             state.status = AgentStatus.FAILED
+            state.last_failure_category = FailureCategory.USER_FAILED
+            state.terminal_failure_category = FailureCategory.USER_FAILED
 
         else:
             state.status = AgentStatus.ESCALATED
+            state.last_failure_category = FailureCategory.USER_ESCALATED
+            state.terminal_failure_category = FailureCategory.USER_ESCALATED
 
         state.final_message = arguments.message
 
@@ -242,6 +361,13 @@ class AgentToolExecutor:
                     test_args.target,
                 )
 
+            if action.tool is ToolName.CHECK_SYNTAX:
+                _CheckSyntaxArguments.model_validate(action.arguments)
+                return (
+                    self.syntax_checker.check_files(self.patch_manager.changed_files),
+                    None,
+                )
+
             if action.tool is ToolName.APPLY_PATCH:
                 patch_args = _ApplyPatchArguments.model_validate(action.arguments)
                 return (
@@ -286,6 +412,56 @@ class AgentToolExecutor:
                 None,
             )
 
+    def rollback_failed_attempt(
+        self,
+        state: AgentState,
+    ) -> ToolObservation:
+        """Rollback the active failed attempt outside normal action budgets."""
+        attempt_id = state.current_attempt_id
+        attempt_files = list(state.current_attempt_files)
+        action = ToolAction(
+            tool=ToolName.RESTORE_FILE,
+            arguments={
+                "scope": "failed_attempt",
+                "attempt_id": attempt_id,
+            },
+            rationale=(
+                "Runtime-enforced transactional rollback after failed verification."
+            ),
+        )
+
+        if not state.rollback_required or attempt_id is None:
+            return self._reject(
+                state,
+                action,
+                "No failed patch attempt is pending transactional rollback.",
+            )
+
+        observation = self.patch_manager.restore_attempt()
+
+        if observation.status is ObservationStatus.OK:
+            state.repository_revision += 1
+            state.changed_files = list(self.patch_manager.changed_files)
+            self._invalidate_verification(state)
+            self._update_syntax_gate(state)
+            state.last_rolled_back_attempt_id = attempt_id
+            state.last_rolled_back_attempt_files = attempt_files
+            state.rollback_required = False
+            self._sync_current_attempt(state)
+        else:
+            state.status = AgentStatus.ESCALATED
+            state.last_failure_category = FailureCategory.ROLLBACK_FAILED
+            state.terminal_failure_category = FailureCategory.ROLLBACK_FAILED
+            state.final_message = (
+                "Transactional rollback of the failed patch attempt failed."
+            )
+
+        return self._record(
+            state,
+            action,
+            observation,
+        )
+
     def execute(
         self,
         state: AgentState,
@@ -302,10 +478,20 @@ class AgentToolExecutor:
         if action.tool is ToolName.FINISH:
             return self._execute_finish(state, action)
 
+        if state.rollback_required:
+            return self._reject(
+                state,
+                action,
+                "Runtime transactional rollback must complete before another "
+                "policy-selected action.",
+            )
+
         state.usage.elapsed_seconds = perf_counter() - self._started_at
 
         if state.usage.exhausted(state.budget):
             state.status = AgentStatus.BUDGET_EXHAUSTED
+            state.last_failure_category = FailureCategory.BUDGET_EXHAUSTED
+            state.terminal_failure_category = FailureCategory.BUDGET_EXHAUSTED
             state.final_message = "A global execution budget was exhausted."
             return self._reject(
                 state,
@@ -331,11 +517,57 @@ class AgentToolExecutor:
         if action.tool is ToolName.APPLY_PATCH:
             state.usage.patch_attempts += 1
 
-        if self.repeated_action_guard.blocks(state, action):
+        if self.verification_mode is VerificationMode.STRICT:
+            if (
+                action.tool is ToolName.APPLY_PATCH
+                and state.current_attempt_id is not None
+                and not state.syntax_check_required
+            ):
+                return self._reject(
+                    state,
+                    action,
+                    "The current patch attempt must pass the full test suite or "
+                    "be rolled back before another patch attempt.",
+                )
+
+            if state.syntax_check_required and action.tool in {
+                ToolName.APPLY_PATCH,
+                ToolName.RUN_TESTS,
+            }:
+                return self._reject(
+                    state,
+                    action,
+                    "A passing syntax check is required for the current repository "
+                    "revision before tests or another patch.",
+                )
+        elif (
+            action.tool is ToolName.APPLY_PATCH and state.current_attempt_id is not None
+        ):
+            self.patch_manager.accept_attempt(state.current_attempt_id)
+            self._clear_current_attempt(state)
+
+        no_progress_reason = self.repeated_action_guard.rejection_reason(
+            state,
+            action,
+        )
+        if no_progress_reason is not None:
+            state.no_progress_streak += 1
+            if (
+                state.no_progress_streak
+                >= self.repeated_action_guard.max_no_progress_events
+            ):
+                state.status = AgentStatus.ESCALATED
+                state.last_failure_category = FailureCategory.NO_PROGRESS
+                state.terminal_failure_category = FailureCategory.NO_PROGRESS
+                state.final_message = (
+                    "Run escalated after repeated no-progress action patterns."
+                )
+                no_progress_reason = f"{no_progress_reason} {state.final_message}"
+
             return self._reject(
                 state,
                 action,
-                "Rejected repeated identical action with no intervening progress.",
+                no_progress_reason,
             )
 
         if action.tool is ToolName.RESTORE_FILE and not state.changed_files:
@@ -347,6 +579,31 @@ class AgentToolExecutor:
 
         observation, test_target = self._dispatch(action)
 
+        if action.tool is ToolName.APPLY_PATCH:
+            if observation.status is ObservationStatus.REJECTED:
+                state.patch_rejection_count += 1
+                state.last_failure_category = FailureCategory.PATCH_REJECTED
+            elif observation.status in {
+                ObservationStatus.ERROR,
+                ObservationStatus.TIMEOUT,
+            }:
+                state.patch_application_failure_count += 1
+                state.last_failure_category = FailureCategory.PATCH_APPLICATION_ERROR
+
+        if action.tool is ToolName.CHECK_SYNTAX and observation.status in {
+            ObservationStatus.ERROR,
+            ObservationStatus.TIMEOUT,
+        }:
+            state.verification_failure_count += 1
+            state.last_failure_category = FailureCategory.SYNTAX_VERIFICATION_FAILED
+
+        if action.tool is ToolName.RUN_TESTS and observation.status in {
+            ObservationStatus.ERROR,
+            ObservationStatus.TIMEOUT,
+        }:
+            state.verification_failure_count += 1
+            state.last_failure_category = FailureCategory.TEST_VERIFICATION_FAILED
+
         if (
             action.tool is ToolName.APPLY_PATCH
             and observation.status is ObservationStatus.OK
@@ -356,14 +613,40 @@ class AgentToolExecutor:
         ):
             state.repository_revision += 1
             state.changed_files = list(self.patch_manager.changed_files)
+            self._sync_current_attempt(state)
             self._invalidate_verification(state)
+            self._update_syntax_gate(state)
+
+        elif action.tool is ToolName.CHECK_SYNTAX:
+            if observation.status is ObservationStatus.OK:
+                state.syntax_verified_revision = state.repository_revision
+            else:
+                state.syntax_verified_revision = None
+                if observation.status in {
+                    ObservationStatus.ERROR,
+                    ObservationStatus.TIMEOUT,
+                }:
+                    self._mark_failed_attempt(
+                        state,
+                        ToolName.CHECK_SYNTAX,
+                    )
 
         elif action.tool is ToolName.RUN_TESTS:
             if test_target is None and observation.status is ObservationStatus.OK:
                 state.full_suite_passed = True
                 state.verified_revision = state.repository_revision
-            elif observation.status is not ObservationStatus.OK:
+                if state.current_attempt_id is not None:
+                    self.patch_manager.accept_attempt(state.current_attempt_id)
+                    self._clear_current_attempt(state)
+            elif observation.status in {
+                ObservationStatus.ERROR,
+                ObservationStatus.TIMEOUT,
+            }:
                 self._invalidate_verification(state)
+                self._mark_failed_attempt(
+                    state,
+                    ToolName.RUN_TESTS,
+                )
 
         return self._record(
             state,

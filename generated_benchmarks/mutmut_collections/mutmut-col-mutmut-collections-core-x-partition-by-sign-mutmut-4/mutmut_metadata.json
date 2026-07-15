@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "eb2d22e9f53b8cc2b70d3634270e6b52e304415755ca13021eb2529b9812429f",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "372ed3071e80fb451e96750a0f90f177f2ffb47528df723451b2899f17080eba",
+  "mutant_name": "mutmut_collections.core.x_partition_by_sign__mutmut_4",
+  "mutant_status": "killed",
+  "mutated_function": "partition_by_sign",
+  "operator_family": "boundary",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

@@ -1,0 +1,23 @@
+{
+  "allowed_paths": [
+    "src"
+  ],
+  "defect_category": "recursive_data_merge",
+  "difficulty": "hard",
+  "expected_hidden_tests": 3,
+  "expected_initial_failures": 2,
+  "forbidden_paths": [
+    "tests"
+  ],
+  "goal": "Repair configuration merging so nested dictionaries merge recursively, lists replace rather than concatenate, and inputs remain unchanged.",
+  "hidden_test_root": "challenge_benchmarks/challenge-deep-config-merge/hidden_tests",
+  "repository_root": "challenge_benchmarks/challenge-deep-config-merge/repository",
+  "task_id": "challenge-deep-config-merge",
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "title": "Non-mutating recursive configuration merge"
+}

@@ -1,0 +1,41 @@
+{
+  "changed_line_count": 34,
+  "clean_reference_validation": {
+    "hidden_passed": true,
+    "hidden_returncode": 0,
+    "visible_passed": true,
+    "visible_returncode": 0
+  },
+  "clean_source_sha256": "ef0b1ad4d4c44ebef2f196f1d1ef662ddebf5160b16f3e91adeedaba5719b169",
+  "defect_category": "state_machine_parser",
+  "defect_diff": "--- a/src/csvrecords.py\n+++ b/src/csvrecords.py\n@@ -6,31 +6,11 @@\n def parse_record(record: str) -> list[str]:\n     \"\"\"Parse one CSV record with commas and doubled-quote escapes.\"\"\"\n     fields: list[str] = []\n-    current: list[str] = []\n-    quoted = False\n-    index = 0\n-\n-    while index < len(record):\n-        character = record[index]\n-        if quoted:\n-            if character == '\"':\n-                if index + 1 < len(record) and record[index + 1] == '\"':\n-                    current.append('\"')\n-                    index += 1\n-                else:\n-                    quoted = False\n-            else:\n-                current.append(character)\n-        elif character == \",\":\n-            fields.append(\"\".join(current))\n-            current = []\n-        elif character == '\"' and not current:\n-            quoted = True\n-        else:\n-            current.append(character)\n-        index += 1\n-\n-    if quoted:\n-        raise ValueError(\"unterminated quoted field\")\n-    fields.append(\"\".join(current))\n+    for part in record.split(\",\"):\n+        value = part.strip()\n+        if value.startswith('\"'):\n+            value = value[1:]\n+        if value.endswith('\"'):\n+            value = value[:-1]\n+        fields.append(value.replace('\"\"', '\"'))\n     return fields\n",
+  "defect_patterns": [
+    "missing_state_machine",
+    "escaped_delimiter",
+    "malformed_input"
+  ],
+  "defective_source_sha256": "6340853b5a9083d0941ff8294e40f01306a609ca16af4c2469b1a171000c2b8b",
+  "difficulty": "hard",
+  "generation": {
+    "command": "python scripts/create_manual_challenges.py --force --timeout-seconds 60",
+    "deterministic": true,
+    "script": "scripts/create_manual_challenges.py"
+  },
+  "hidden_tests_tree_sha256": "bccefcede34fa0d96e8514bb72428d42771708def15b68f05dff0f4d4898995e",
+  "hidden_validation": {
+    "collected_tests": 3,
+    "failed": 1,
+    "returncode": 1
+  },
+  "origin_type": "manual_challenge",
+  "rationale": "Requires coordinated character-state handling rather than a one-line delimiter split.",
+  "repository_tree_sha256": "b8bdf0d03ffafdefc6dd189b57712740ad9982b5a6da6053249e0903a0d88fb2",
+  "schema_version": "1.0",
+  "selection_rank": 6,
+  "source_file": "src/csvrecords.py",
+  "task_id": "challenge-csv-record-parser",
+  "visible_validation": {
+    "failed": 2,
+    "returncode": 1
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "suite_id": "patchpilot-manual-challenges",
+  "task_count": 8,
+  "tasks": [
+    {
+      "defect_category": "multi_line_interval_logic",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-interval-merge/task.json",
+      "origin_type": "manual_challenge",
+      "provenance_path": "challenge_benchmarks/challenge-interval-merge/provenance.json",
+      "repository_path": "challenge_benchmarks/challenge-interval-merge/repository",
+      "task_id": "challenge-interval-merge"
+    },
+    {
+      "defect_category": "transactional_state_management",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-inventory-reservation/task.json",
+      "origin_type": "manual_challenge",
+      "provenance_path": "challenge_benchmarks/challenge-inventory-reservation/provenance.json",
+      "repository_path": "challenge_benchmarks/challenge-inventory-reservation/repository",
+      "task_id": "challenge-inventory-reservation"
+    },
+    {
+      "defect_category": "graph_algorithm_invariant",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-topological-order/task.json",
+      "origin_type": "manual_challenge",
+      "provenance_path": "challenge_benchmarks/challenge-topological-order/provenance.json",
+      "repository_path": "challenge_benchmarks/challenge-topological-order/repository",
+      "task_id": "challenge-topological-order"
+    },
+    {
+      "defect_category": "recursive_data_merge",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-deep-config-merge/task.json",
+      "origin_type": "manual_challenge",
+      "provenance_path": "challenge_benchmarks/challenge-deep-config-merge/provenance.json",
+      "repository_path": "challenge_benchmarks/challenge-deep-config-merge/repository",
+      "task_id": "challenge-deep-config-merge"
+    },
+    {
+      "defect_category": "stateful_window_algorithm",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-rolling-rate-limit/task.json",
+      "origin_type": "manual_challenge",
+      "provenance_path": "challenge_benchmarks/challenge-rolling-rate-limit/provenance.json",
+      "repository_path": "challenge_benchmarks/challenge-rolling-rate-limit/repository",
+      "task_id": "challenge-rolling-rate-limit"
+    },
+    {
+      "defect_category": "state_machine_parser",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-csv-record-parser/task.json",
+      "origin_type": "manual_challenge",
+      "provenance_path": "challenge_benchmarks/challenge-csv-record-parser/provenance.json",
+      "repository_path": "challenge_benchmarks/challenge-csv-record-parser/repository",
+      "task_id": "challenge-csv-record-parser"
+    },
+    {
+      "defect_category": "cursor_state_protocol",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-cursor-pagination/task.json",
+      "origin_type": "manual_challenge",
+      "provenance_path": "challenge_benchmarks/challenge-cursor-pagination/provenance.json",
+      "repository_path": "challenge_benchmarks/challenge-cursor-pagination/repository",
+      "task_id": "challenge-cursor-pagination"
+    },
+    {
+      "defect_category": "idempotent_financial_state",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-ledger-reconciliation/task.json",
+      "origin_type": "manual_challenge",
+      "provenance_path": "challenge_benchmarks/challenge-ledger-reconciliation/provenance.json",
+      "repository_path": "challenge_benchmarks/challenge-ledger-reconciliation/repository",
+      "task_id": "challenge-ledger-reconciliation"
+    }
+  ]
+}

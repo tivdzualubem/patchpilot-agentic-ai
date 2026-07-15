@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,6 +12,12 @@ from patchpilot.agent import (
     AgentToolExecutor,
     TraceRecorder,
 )
+from patchpilot.agent.executor import VerificationMode
+from patchpilot.benchmark.hidden_verification import (
+    HiddenTestRunner,
+    HiddenVerificationResult,
+)
+from patchpilot.benchmark.manifest import load_manifest
 from patchpilot.benchmark.workspace import (
     BenchmarkWorkspace,
     PreparedBenchmark,
@@ -25,7 +32,9 @@ class BenchmarkRun:
     run_id: str
     prepared: PreparedBenchmark
     state: AgentState
+    hidden_verification: HiddenVerificationResult
     trace_path: Path
+    trace_event_path: Path
 
 
 class BenchmarkRunner:
@@ -42,9 +51,64 @@ class BenchmarkRunner:
             self.project_root,
             self.output_root / "workspaces",
         )
-        self.trace_recorder = TraceRecorder(
-            self.output_root / "traces"
+        self.trace_recorder = TraceRecorder(self.output_root / "traces")
+
+    @staticmethod
+    def _qualified_name(value: object) -> str:
+        return f"{type(value).__module__}.{type(value).__qualname__}"
+
+    @classmethod
+    def _trace_metadata(
+        cls,
+        policy: AgentPolicy,
+        metadata: dict[str, str] | None,
+        test_timeout_seconds: int,
+        verification_mode: VerificationMode,
+    ) -> dict[str, str]:
+        result = dict(metadata or {})
+        result.update(
+            {
+                "policy_class": cls._qualified_name(policy),
+                "test_timeout_seconds": str(test_timeout_seconds),
+                "runtime_verification_mode": verification_mode.value,
+                "hidden_verification_phase": "post_run_external",
+                "hidden_output_exposed_to_agent": "false",
+                "trace_schema_version": "2.0",
+            }
         )
+
+        model = getattr(policy, "model", None)
+        provider = getattr(model, "trace_metadata", None)
+        if callable(provider):
+            model_metadata = provider()
+            if not isinstance(model_metadata, dict):
+                raise TypeError("Model trace_metadata() must return a dictionary.")
+
+            for key, value in sorted(model_metadata.items()):
+                result[f"model_{key}"] = (
+                    value
+                    if isinstance(value, str)
+                    else json.dumps(
+                        value,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    )
+                )
+
+        return result
+
+    @staticmethod
+    def _record_hidden_result(
+        state: AgentState,
+        result: HiddenVerificationResult,
+    ) -> None:
+        state.hidden_suite_status = result.status.value
+        state.hidden_suite_passed = result.passed
+        state.hidden_suite_test_count = result.test_count
+        state.hidden_suite_duration_seconds = result.duration_seconds
+        state.hidden_suite_return_code = result.return_code
+        state.hidden_suite_output_sha256 = result.output_sha256
+        state.hidden_suite_error_type = result.error_type
 
     def run(
         self,
@@ -54,6 +118,7 @@ class BenchmarkRunner:
         budget: ExecutionBudget | None = None,
         metadata: dict[str, str] | None = None,
         test_timeout_seconds: int = 60,
+        verification_mode: VerificationMode = VerificationMode.STRICT,
     ) -> BenchmarkRun:
         """Execute one complete bounded benchmark run."""
         resolved_manifest = (
@@ -61,10 +126,9 @@ class BenchmarkRunner:
             if manifest_path.is_absolute()
             else self.project_root / manifest_path
         )
+        manifest = load_manifest(resolved_manifest)
 
-        prepared = self.workspace_manager.prepare(
-            resolved_manifest
-        )
+        prepared = self.workspace_manager.prepare(resolved_manifest)
         state = AgentState(
             task=prepared.task,
             budget=budget or ExecutionBudget(),
@@ -73,6 +137,7 @@ class BenchmarkRunner:
             prepared.workspace_root,
             prepared.task,
             test_timeout_seconds=test_timeout_seconds,
+            verification_mode=verification_mode,
         )
         loop = AgentControlLoop(
             policy=policy,
@@ -80,20 +145,51 @@ class BenchmarkRunner:
             recorder=self.trace_recorder,
         )
 
+        trace_metadata = self._trace_metadata(
+            policy,
+            metadata,
+            test_timeout_seconds,
+            verification_mode,
+        )
         final_state = loop.run(
             state,
             run_id=run_id,
-            metadata=metadata,
+            metadata=trace_metadata,
+        )
+
+        hidden_runner = HiddenTestRunner(
+            project_root=self.project_root,
+            output_root=self.output_root / "hidden-verification",
+            timeout_seconds=test_timeout_seconds,
+        )
+        hidden_result = hidden_runner.run(
+            manifest=manifest,
+            repaired_repository=prepared.repository_root,
+            run_id=run_id,
+        )
+        self._record_hidden_result(final_state, hidden_result)
+
+        hidden_metadata = {
+            **trace_metadata,
+            "hidden_suite_status": hidden_result.status.value,
+            "hidden_suite_configured": str(
+                manifest.hidden_test_root is not None
+            ).lower(),
+        }
+        self.trace_recorder.save(
+            final_state,
+            run_id,
+            hidden_metadata,
+            checkpoint_kind="hidden_verification",
         )
 
         return BenchmarkRun(
             run_id=run_id,
             prepared=prepared,
             state=final_state,
-            trace_path=(
-                self.trace_recorder.output_directory
-                / f"{run_id}.json"
-            ),
+            hidden_verification=hidden_result,
+            trace_path=self.trace_recorder.snapshot_path(run_id),
+            trace_event_path=self.trace_recorder.event_log_path(run_id),
         )
 
     def cleanup(self, run: BenchmarkRun) -> None:

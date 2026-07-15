@@ -1,0 +1,136 @@
+{
+  "total_runs": 212,
+  "tasks": 53,
+  "conditions": 4,
+  "cochran_q": 11.0,
+  "cochran_q_df": 3,
+  "cochran_q_p": 0.0117258755784214,
+  "condition_summary": [
+    {
+      "condition": "one-shot",
+      "runs": 53,
+      "hidden_verified_successes": 37,
+      "hidden_verified_rate": 0.6981132075471698,
+      "hidden_ci95_low": 0.5646316733114988,
+      "hidden_ci95_high": 0.8048169727242108,
+      "visible_successes": 38,
+      "mean_elapsed_seconds": 86.52595655496222,
+      "median_elapsed_seconds": 74.35569088100056,
+      "mean_model_calls": 1.150943396226415,
+      "parse_failure_runs": 9,
+      "policy_failures": 6,
+      "reflections": 0,
+      "hypothesis_revisions": 0
+    },
+    {
+      "condition": "fixed-workflow",
+      "runs": 53,
+      "hidden_verified_successes": 37,
+      "hidden_verified_rate": 0.6981132075471698,
+      "hidden_ci95_low": 0.5646316733114988,
+      "hidden_ci95_high": 0.8048169727242108,
+      "visible_successes": 38,
+      "mean_elapsed_seconds": 105.7427961403959,
+      "median_elapsed_seconds": 91.34985351100111,
+      "mean_model_calls": 1.471698113207547,
+      "parse_failure_runs": 15,
+      "policy_failures": 15,
+      "reflections": 0,
+      "hypothesis_revisions": 0
+    },
+    {
+      "condition": "tool-agent-no-reflection",
+      "runs": 53,
+      "hidden_verified_successes": 31,
+      "hidden_verified_rate": 0.5849056603773585,
+      "hidden_ci95_low": 0.45094422181344374,
+      "hidden_ci95_high": 0.7073909122018601,
+      "visible_successes": 33,
+      "mean_elapsed_seconds": 350.12356167047164,
+      "median_elapsed_seconds": 320.2320534519968,
+      "mean_model_calls": 3.9622641509433962,
+      "parse_failure_runs": 21,
+      "policy_failures": 20,
+      "reflections": 0,
+      "hypothesis_revisions": 0
+    },
+    {
+      "condition": "full-reflective-agent",
+      "runs": 53,
+      "hidden_verified_successes": 34,
+      "hidden_verified_rate": 0.6415094339622641,
+      "hidden_ci95_low": 0.5069114155535945,
+      "hidden_ci95_high": 0.7569804744719122,
+      "visible_successes": 36,
+      "mean_elapsed_seconds": 249.6386820741318,
+      "median_elapsed_seconds": 238.70644813500255,
+      "mean_model_calls": 3.5283018867924527,
+      "parse_failure_runs": 16,
+      "policy_failures": 17,
+      "reflections": 0,
+      "hypothesis_revisions": 0
+    }
+  ],
+  "pairwise_mcnemar": [
+    {
+      "condition_a": "one-shot",
+      "condition_b": "fixed-workflow",
+      "a_only_successes": 0,
+      "b_only_successes": 0,
+      "discordant_pairs": 0,
+      "paired_risk_difference": 0.0,
+      "exact_mcnemar_p_raw": 1.0,
+      "exact_mcnemar_p_holm": 1.0
+    },
+    {
+      "condition_a": "one-shot",
+      "condition_b": "tool-agent-no-reflection",
+      "a_only_successes": 6,
+      "b_only_successes": 0,
+      "discordant_pairs": 6,
+      "paired_risk_difference": 0.1132075471698113,
+      "exact_mcnemar_p_raw": 0.03125,
+      "exact_mcnemar_p_holm": 0.1875
+    },
+    {
+      "condition_a": "one-shot",
+      "condition_b": "full-reflective-agent",
+      "a_only_successes": 3,
+      "b_only_successes": 0,
+      "discordant_pairs": 3,
+      "paired_risk_difference": 0.05660377358490565,
+      "exact_mcnemar_p_raw": 0.25,
+      "exact_mcnemar_p_holm": 1.0
+    },
+    {
+      "condition_a": "fixed-workflow",
+      "condition_b": "tool-agent-no-reflection",
+      "a_only_successes": 6,
+      "b_only_successes": 0,
+      "discordant_pairs": 6,
+      "paired_risk_difference": 0.1132075471698113,
+      "exact_mcnemar_p_raw": 0.03125,
+      "exact_mcnemar_p_holm": 0.1875
+    },
+    {
+      "condition_a": "fixed-workflow",
+      "condition_b": "full-reflective-agent",
+      "a_only_successes": 3,
+      "b_only_successes": 0,
+      "discordant_pairs": 3,
+      "paired_risk_difference": 0.05660377358490565,
+      "exact_mcnemar_p_raw": 0.25,
+      "exact_mcnemar_p_holm": 1.0
+    },
+    {
+      "condition_a": "tool-agent-no-reflection",
+      "condition_b": "full-reflective-agent",
+      "a_only_successes": 3,
+      "b_only_successes": 6,
+      "discordant_pairs": 9,
+      "paired_risk_difference": -0.05660377358490565,
+      "exact_mcnemar_p_raw": 0.5078125,
+      "exact_mcnemar_p_holm": 1.0
+    }
+  ]
+}

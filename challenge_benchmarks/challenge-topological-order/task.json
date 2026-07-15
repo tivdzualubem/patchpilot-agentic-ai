@@ -1,0 +1,23 @@
+{
+  "allowed_paths": [
+    "src"
+  ],
+  "defect_category": "graph_algorithm_invariant",
+  "difficulty": "hard",
+  "expected_hidden_tests": 3,
+  "expected_initial_failures": 3,
+  "forbidden_paths": [
+    "tests"
+  ],
+  "goal": "Repair dependency ordering so every node is included, prerequisites appear first, ties are deterministic, and cycles are rejected.",
+  "hidden_test_root": "challenge_benchmarks/challenge-topological-order/hidden_tests",
+  "repository_root": "challenge_benchmarks/challenge-topological-order/repository",
+  "task_id": "challenge-topological-order",
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "title": "Deterministic dependency ordering"
+}

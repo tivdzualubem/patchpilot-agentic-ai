@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "9984a23dda7b2106cdb2e9bba3e96e65031fc509629e869bb07883c220f0e7de",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "de0e712adb8445632e2839cfde21c6f1cd828c0ee0cdd93c7b818d14fda21a20",
+  "mutant_name": "mutmut_algorithms.core.x_gcd__mutmut_6",
+  "mutant_status": "killed",
+  "mutated_function": "gcd",
+  "operator_family": "arithmetic",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

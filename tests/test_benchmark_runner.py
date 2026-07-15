@@ -30,6 +30,10 @@ class RepairPolicy:
                 rationale="Replace subtraction with addition.",
             ),
             ToolAction(
+                tool=ToolName.CHECK_SYNTAX,
+                rationale="Validate changed Python syntax.",
+            ),
+            ToolAction(
                 tool=ToolName.RUN_TESTS,
                 rationale="Verify the repaired repository.",
             ),
@@ -74,6 +78,27 @@ def test_complete_benchmark_repair(tmp_path: Path) -> None:
     repaired = run.prepared.repository_root / "src/calculator.py"
 
     assert run.state.status is AgentStatus.SUCCEEDED
+    assert run.state.syntax_verified_revision == run.state.repository_revision
     assert run.state.full_suite_passed is True
+    assert run.state.hidden_suite_passed is True
+    assert run.state.hidden_suite_status == "passed"
+    assert run.hidden_verification.passed is True
+    assert run.hidden_verification.test_count == 2
     assert "left + right" in repaired.read_text(encoding="utf-8")
     assert run.trace_path.is_file()
+    assert run.trace_event_path.is_file()
+
+    checkpoints = runner.trace_recorder.load_checkpoints("calculator-run-001")
+    assert len(checkpoints) == 14
+    assert checkpoints[0].checkpoint_kind == "initial"
+    assert checkpoints[1].checkpoint_kind == "post_decision"
+    assert checkpoints[2].checkpoint_kind == "post_action"
+    assert checkpoints[-2].checkpoint_kind == "post_action"
+    assert checkpoints[-1].checkpoint_kind == "hidden_verification"
+    assert checkpoints[-1].completed_at is not None
+    assert checkpoints[-1].state.status is AgentStatus.SUCCEEDED
+    assert checkpoints[-1].state.hidden_suite_passed is True
+    assert checkpoints[-1].state.hidden_suite_output_sha256 is not None
+    assert checkpoints[-1].metadata["hidden_output_exposed_to_agent"] == "false"
+    assert checkpoints[-1].metadata["trace_schema_version"] == "2.0"
+    assert checkpoints[-1].metadata["policy_class"].endswith(".RepairPolicy")

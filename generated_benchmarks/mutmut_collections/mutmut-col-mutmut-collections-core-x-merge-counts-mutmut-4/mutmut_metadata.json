@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "19df727df6562fcc467c529c4a611849926ccc2996be2d7c56769b395ff6e91a",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "372ed3071e80fb451e96750a0f90f177f2ffb47528df723451b2899f17080eba",
+  "mutant_name": "mutmut_collections.core.x_merge_counts__mutmut_4",
+  "mutant_status": "killed",
+  "mutated_function": "merge_counts",
+  "operator_family": "arithmetic",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

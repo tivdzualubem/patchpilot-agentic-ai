@@ -8,6 +8,7 @@ from patchpilot.tools.repository import (
     RepositoryAccessError,
     RepositorySandbox,
 )
+from patchpilot.tools.syntax_checker import SyntaxChecker
 from patchpilot.tools.test_runner import (
     TestExecutionError,
     TestRunner,
@@ -18,6 +19,7 @@ __all__ = [
     "PatchPolicyError",
     "RepositoryAccessError",
     "RepositorySandbox",
+    "SyntaxChecker",
     "TestExecutionError",
     "TestRunner",
 ]

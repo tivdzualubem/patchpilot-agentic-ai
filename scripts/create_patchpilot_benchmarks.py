@@ -24,7 +24,7 @@ TASKS = [
                 """Return the difference between two integers."""
                 return left + right
         ''',
-        "test": '''\
+        "test": """\
             from src.calculator import subtract
 
 
@@ -38,7 +38,7 @@ TASKS = [
 
             def test_subtract_zero() -> None:
                 assert subtract(9, 0) == 9
-        ''',
+        """,
         "expected_initial_failures": 2,
     },
     {
@@ -56,7 +56,7 @@ TASKS = [
                 """Return the product of two integers."""
                 return left + right
         ''',
-        "test": '''\
+        "test": """\
             from src.calculator import multiply
 
 
@@ -70,7 +70,7 @@ TASKS = [
 
             def test_multiply_by_zero() -> None:
                 assert multiply(9, 0) == 0
-        ''',
+        """,
         "expected_initial_failures": 3,
     },
     {
@@ -88,7 +88,7 @@ TASKS = [
                 """Return the arithmetic negation of an integer."""
                 return value
         ''',
-        "test": '''\
+        "test": """\
             from src.calculator import negate
 
 
@@ -102,7 +102,7 @@ TASKS = [
 
             def test_negate_zero() -> None:
                 assert negate(0) == 0
-        ''',
+        """,
         "expected_initial_failures": 2,
     },
     {
@@ -120,7 +120,7 @@ TASKS = [
                 """Return the input text in reverse order."""
                 return text
         ''',
-        "test": '''\
+        "test": """\
             from src.strings import reverse_text
 
 
@@ -134,7 +134,7 @@ TASKS = [
 
             def test_reverse_with_punctuation() -> None:
                 assert reverse_text("AI!") == "!IA"
-        ''',
+        """,
         "expected_initial_failures": 2,
     },
     {
@@ -152,7 +152,7 @@ TASKS = [
                 """Return the input text converted to lowercase."""
                 return text.upper()
         ''',
-        "test": '''\
+        "test": """\
             from src.strings import lowercase
 
 
@@ -166,7 +166,7 @@ TASKS = [
 
             def test_lowercase_empty_string() -> None:
                 assert lowercase("") == ""
-        ''',
+        """,
         "expected_initial_failures": 2,
     },
     {
@@ -184,7 +184,7 @@ TASKS = [
                 """Return the first item in a non-empty list."""
                 return values[-1]
         ''',
-        "test": '''\
+        "test": """\
             from src.lists import first_item
 
 
@@ -198,7 +198,7 @@ TASKS = [
 
             def test_first_item_single_value() -> None:
                 assert first_item([42]) == 42
-        ''',
+        """,
         "expected_initial_failures": 2,
     },
     {
@@ -216,7 +216,7 @@ TASKS = [
                 """Return the arithmetic sum of the list values."""
                 return len(values)
         ''',
-        "test": '''\
+        "test": """\
             from src.lists import total
 
 
@@ -230,7 +230,7 @@ TASKS = [
 
             def test_total_mixed_values() -> None:
                 assert total([-1, 5]) == 4
-        ''',
+        """,
         "expected_initial_failures": 2,
     },
     {
@@ -248,7 +248,7 @@ TASKS = [
                 """Return the arithmetic mean of a non-empty list."""
                 return sum(values) / (len(values) + 1)
         ''',
-        "test": '''\
+        "test": """\
             from src.stats import mean
 
 
@@ -262,7 +262,7 @@ TASKS = [
 
             def test_mean_symmetric_values() -> None:
                 assert mean([-2.0, 2.0]) == 0.0
-        ''',
+        """,
         "expected_initial_failures": 2,
     },
     {
@@ -280,7 +280,7 @@ TASKS = [
                 """Return the area of a rectangle."""
                 return width + height
         ''',
-        "test": '''\
+        "test": """\
             from src.geometry import rectangle_area
 
 
@@ -294,15 +294,14 @@ TASKS = [
 
             def test_rectangle_area_float_width() -> None:
                 assert rectangle_area(2.5, 4.0) == 10.0
-        ''',
+        """,
         "expected_initial_failures": 3,
     },
     {
         "task_id": "geometry-002",
         "title": "Rectangle perimeter uses area multiplication",
         "goal": (
-            "Repair the rectangle_perimeter function so that all "
-            "regression tests pass."
+            "Repair the rectangle_perimeter function so that all regression tests pass."
         ),
         "defect_category": "wrong_formula",
         "difficulty": "medium",
@@ -315,7 +314,7 @@ TASKS = [
                 """Return the perimeter of a rectangle."""
                 return width * height
         ''',
-        "test": '''\
+        "test": """\
             from src.geometry import rectangle_perimeter
 
 
@@ -329,7 +328,7 @@ TASKS = [
 
             def test_rectangle_perimeter_float_width() -> None:
                 assert rectangle_perimeter(2.5, 4.0) == 13.0
-        ''',
+        """,
         "expected_initial_failures": 3,
     },
     {
@@ -347,7 +346,7 @@ TASKS = [
                 """Return True when the integer is even."""
                 return value % 2 == 1
         ''',
-        "test": '''\
+        "test": """\
             from src.numbers import is_even
 
 
@@ -361,12 +360,147 @@ TASKS = [
 
             def test_zero_is_even() -> None:
                 assert is_even(0) is True
-        ''',
+        """,
         "expected_initial_failures": 3,
     },
 ]
 
-CATALOG_TEST = '''\
+HIDDEN_TESTS = {
+    "calculator-001": """\
+        from src.calculator import add
+
+
+        def test_add_large_mixed_sign_values() -> None:
+            assert add(100, -40) == 60
+
+
+        def test_add_two_negative_values() -> None:
+            assert add(-25, -17) == -42
+    """,
+    "calculator-002": """\
+        from src.calculator import subtract
+
+
+        def test_subtract_from_zero() -> None:
+            assert subtract(0, 7) == -7
+
+
+        def test_subtract_larger_negative_value() -> None:
+            assert subtract(-10, 6) == -16
+    """,
+    "calculator-003": """\
+        from src.calculator import multiply
+
+
+        def test_multiply_larger_values() -> None:
+            assert multiply(7, 8) == 56
+
+
+        def test_multiply_two_negative_values() -> None:
+            assert multiply(-6, -9) == 54
+    """,
+    "calculator-004": """\
+        from src.calculator import negate
+
+
+        def test_negate_large_positive_value() -> None:
+            assert negate(123) == -123
+
+
+        def test_negate_large_negative_value() -> None:
+            assert negate(-91) == 91
+    """,
+    "geometry-001": """\
+        from src.geometry import rectangle_area
+
+
+        def test_rectangle_area_fractional_dimensions() -> None:
+            assert rectangle_area(1.25, 8.0) == 10.0
+
+
+        def test_rectangle_area_square() -> None:
+            assert rectangle_area(6.0, 6.0) == 36.0
+    """,
+    "geometry-002": """\
+        from src.geometry import rectangle_perimeter
+
+
+        def test_rectangle_perimeter_fractional_dimensions() -> None:
+            assert rectangle_perimeter(1.5, 2.5) == 8.0
+
+
+        def test_rectangle_perimeter_square() -> None:
+            assert rectangle_perimeter(6.0, 6.0) == 24.0
+    """,
+    "lists-001": """\
+        from src.lists import first_item
+
+
+        def test_first_item_when_first_is_zero() -> None:
+            assert first_item([0, 5, 9]) == 0
+
+
+        def test_first_item_with_negative_values() -> None:
+            assert first_item([-8, -3, -1]) == -8
+    """,
+    "lists-002": """\
+        from src.lists import total
+
+
+        def test_total_larger_mixed_values() -> None:
+            assert total([10, -5, 2, 8]) == 15
+
+
+        def test_total_repeated_values() -> None:
+            assert total([4, 4, 4, 4]) == 16
+    """,
+    "numbers-001": """\
+        from src.numbers import is_even
+
+
+        def test_negative_even_number() -> None:
+            assert is_even(-4) is True
+
+
+        def test_negative_odd_number() -> None:
+            assert is_even(-3) is False
+    """,
+    "stats-001": """\
+        from src.stats import mean
+
+
+        def test_mean_fractional_values() -> None:
+            assert mean([1.5, 2.5]) == 2.0
+
+
+        def test_mean_larger_collection() -> None:
+            assert mean([1.0, 3.0, 5.0, 7.0]) == 4.0
+    """,
+    "strings-001": """\
+        from src.strings import reverse_text
+
+
+        def test_reverse_longer_word() -> None:
+            assert reverse_text("agentic") == "citnega"
+
+
+        def test_reverse_spaces() -> None:
+            assert reverse_text("a b c") == "c b a"
+    """,
+    "strings-002": """\
+        from src.strings import lowercase
+
+
+        def test_lowercase_with_digits_and_punctuation() -> None:
+            assert lowercase("AI-2026!") == "ai-2026!"
+
+
+        def test_lowercase_preserves_spaces() -> None:
+            assert lowercase("  Mixed Case  ") == "  mixed case  "
+    """,
+}
+
+CATALOG_TEST = """\
 from __future__ import annotations
 
 import re
@@ -410,7 +544,7 @@ def test_benchmark_manifest_and_initial_failure_count(manifest_path: Path) -> No
 
     assert result.returncode != 0
     assert _failure_count(output) == manifest.expected_initial_failures
-'''
+"""
 
 
 def write_text(path: Path, content: str) -> None:
@@ -425,6 +559,11 @@ def write_task(task: dict[str, object]) -> None:
     write_text(root / "src" / str(task["module"]), str(task["source"]))
     module_stem = Path(str(task["module"])).stem
     write_text(root / "tests" / f"test_{module_stem}.py", str(task["test"]))
+    hidden_test = HIDDEN_TESTS[task_id]
+    write_text(
+        BENCHMARKS / task_id / "hidden_tests" / f"test_hidden_{module_stem}.py",
+        hidden_test,
+    )
 
     manifest = {
         "task_id": task_id,
@@ -437,6 +576,8 @@ def write_task(task: dict[str, object]) -> None:
         "forbidden_paths": ["tests"],
         "test_command": ["python", "-m", "pytest", "-q"],
         "expected_initial_failures": task["expected_initial_failures"],
+        "hidden_test_root": f"benchmarks/{task_id}/hidden_tests",
+        "expected_hidden_tests": 2,
     }
     write_text(
         BENCHMARKS / task_id / "task.json",

@@ -1,0 +1,11 @@
+{
+  "exported_repository_sha256": "1364c553c6c17253c39bec6666fc6c9dbb9f6bbf21c6b62cb41a84cf8cf4e61b",
+  "hidden_initial_failures": 1,
+  "hidden_tests_sha256": "372ed3071e80fb451e96750a0f90f177f2ffb47528df723451b2899f17080eba",
+  "mutant_name": "mutmut_collections.core.x_flatten_once__mutmut_1",
+  "mutant_status": "killed",
+  "mutated_function": "flatten_once",
+  "operator_family": "collection",
+  "provenance_file": "provenance.json",
+  "visible_initial_failures": 1
+}

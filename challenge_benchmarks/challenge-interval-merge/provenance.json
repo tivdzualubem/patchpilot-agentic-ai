@@ -1,0 +1,41 @@
+{
+  "changed_line_count": 8,
+  "clean_reference_validation": {
+    "hidden_passed": true,
+    "hidden_returncode": 0,
+    "visible_passed": true,
+    "visible_returncode": 0
+  },
+  "clean_source_sha256": "1a4378bf87aedc060867cef3315360183831cd28ad4e5bc4301168f44394450c",
+  "defect_category": "multi_line_interval_logic",
+  "defect_diff": "--- a/src/intervals.py\n+++ b/src/intervals.py\n@@ -5,17 +5,17 @@\n \n def merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:\n     \"\"\"Merge overlapping or touching closed intervals.\"\"\"\n-    normalized = [(min(start, end), max(start, end)) for start, end in intervals]\n+    normalized = [(start, end) for start, end in intervals]\n     if not normalized:\n         return []\n \n-    normalized.sort(key=lambda item: (item[0], item[1]))\n+    normalized.sort(key=lambda item: (item[1], item[0]))\n     merged: list[tuple[int, int]] = [normalized[0]]\n \n     for start, end in normalized[1:]:\n         previous_start, previous_end = merged[-1]\n-        if start <= previous_end:\n-            merged[-1] = (previous_start, max(previous_end, end))\n+        if start < previous_end:\n+            merged[-1] = (start, max(previous_end, end))\n         else:\n             merged.append((start, end))\n     return merged\n",
+  "defect_patterns": [
+    "wrong_sort_key",
+    "boundary_condition",
+    "state_update"
+  ],
+  "defective_source_sha256": "088a0801d4705e8dde3e323439e37127184930d486df0e98d868da2578013bd1",
+  "difficulty": "hard",
+  "generation": {
+    "command": "python scripts/create_manual_challenges.py --force --timeout-seconds 60",
+    "deterministic": true,
+    "script": "scripts/create_manual_challenges.py"
+  },
+  "hidden_tests_tree_sha256": "9e1af38a6b716f585f779b6e23effe817e9acafac6040411710032427d15a30d",
+  "hidden_validation": {
+    "collected_tests": 3,
+    "failed": 2,
+    "returncode": 1
+  },
+  "origin_type": "manual_challenge",
+  "rationale": "Requires coordinated fixes to ordering, overlap semantics, and merged-state updates.",
+  "repository_tree_sha256": "956fa3b73d007ce5901ee9fa438fadc0f5806b9ab4b9933d7f8285eaa060619c",
+  "schema_version": "1.0",
+  "selection_rank": 1,
+  "source_file": "src/intervals.py",
+  "task_id": "challenge-interval-merge",
+  "visible_validation": {
+    "failed": 2,
+    "returncode": 1
+  }
+}

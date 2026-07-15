@@ -1,0 +1,26 @@
+[
+  {
+    "project_id": "mutmut_algorithms",
+    "source_root": "benchmark_seeds/mutmut_algorithms",
+    "source_paths": ["src/mutmut_algorithms"],
+    "test_paths": ["tests"],
+    "hidden_test_root": "hidden_tests",
+    "task_prefix": "mutmut-alg"
+  },
+  {
+    "project_id": "mutmut_collections",
+    "source_root": "benchmark_seeds/mutmut_collections",
+    "source_paths": ["src/mutmut_collections"],
+    "test_paths": ["tests"],
+    "hidden_test_root": "hidden_tests",
+    "task_prefix": "mutmut-col"
+  },
+  {
+    "project_id": "mutmut_textdata",
+    "source_root": "benchmark_seeds/mutmut_textdata",
+    "source_paths": ["src/mutmut_textdata"],
+    "test_paths": ["tests"],
+    "hidden_test_root": "hidden_tests",
+    "task_prefix": "mutmut-txt"
+  }
+]

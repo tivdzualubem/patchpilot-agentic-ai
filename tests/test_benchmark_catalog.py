@@ -28,6 +28,14 @@ def test_benchmark_manifest_and_initial_failure_count(manifest_path: Path) -> No
     assert (repository / "tests").is_dir()
     assert manifest.allowed_paths == ["src"]
     assert manifest.forbidden_paths == ["tests"]
+    assert manifest.hidden_test_root is not None
+    assert manifest.expected_hidden_tests is not None
+
+    hidden_root = Path(manifest.hidden_test_root)
+    assert hidden_root.is_dir()
+    assert not hidden_root.is_relative_to(repository)
+    assert list(hidden_root.rglob("test_*.py"))
+    assert not (repository / "hidden_tests").exists()
 
     result = subprocess.run(
         manifest.test_command,

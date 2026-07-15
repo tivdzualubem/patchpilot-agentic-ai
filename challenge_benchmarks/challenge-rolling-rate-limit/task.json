@@ -1,0 +1,23 @@
+{
+  "allowed_paths": [
+    "src"
+  ],
+  "defect_category": "stateful_window_algorithm",
+  "difficulty": "hard",
+  "expected_hidden_tests": 3,
+  "expected_initial_failures": 3,
+  "forbidden_paths": [
+    "tests"
+  ],
+  "goal": "Repair rolling-window rate limiting so boundary events expire correctly, rejected events consume no capacity, and timestamps must be monotonic.",
+  "hidden_test_root": "challenge_benchmarks/challenge-rolling-rate-limit/hidden_tests",
+  "repository_root": "challenge_benchmarks/challenge-rolling-rate-limit/repository",
+  "task_id": "challenge-rolling-rate-limit",
+  "test_command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "title": "Rolling-window admission decisions"
+}

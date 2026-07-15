@@ -1,0 +1,7 @@
+condition_a,condition_b,a_only_successes,b_only_successes,discordant_pairs,paired_risk_difference,exact_mcnemar_p_raw,exact_mcnemar_p_holm
+one-shot,fixed-workflow,0,0,0,0.0,1.0,1.0
+one-shot,tool-agent-no-reflection,6,0,6,0.1132075471698113,0.03125,0.1875
+one-shot,full-reflective-agent,3,0,3,0.05660377358490565,0.25,1.0
+fixed-workflow,tool-agent-no-reflection,6,0,6,0.1132075471698113,0.03125,0.1875
+fixed-workflow,full-reflective-agent,3,0,3,0.05660377358490565,0.25,1.0
+tool-agent-no-reflection,full-reflective-agent,3,6,9,-0.05660377358490565,0.5078125,1.0

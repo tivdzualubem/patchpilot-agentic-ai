@@ -1,0 +1,436 @@
+{
+  "manifest_paths": [
+    "challenge_benchmarks/challenge-csv-record-parser/task.json",
+    "challenge_benchmarks/challenge-cursor-pagination/task.json",
+    "challenge_benchmarks/challenge-deep-config-merge/task.json",
+    "challenge_benchmarks/challenge-interval-merge/task.json",
+    "challenge_benchmarks/challenge-inventory-reservation/task.json",
+    "challenge_benchmarks/challenge-ledger-reconciliation/task.json",
+    "challenge_benchmarks/challenge-rolling-rate-limit/task.json",
+    "challenge_benchmarks/challenge-topological-order/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-add-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-factorial-mutmut-10/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-flatten-once-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-gcd-mutmut-6/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-has-balanced-parentheses-mutmut-11/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-is-even-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-is-palindrome-mutmut-5/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-lcm-mutmut-10/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-median-mutmut-15/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-merge-sorted-mutmut-12/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-multiply-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-normalize-whitespace-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-safe-divide-mutmut-6/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-bounded-slice-mutmut-20/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-chunked-mutmut-10/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-cumulative-sum-mutmut-5/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-first-non-none-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-flatten-once-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-frequency-map-mutmut-3/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-index-of-max-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-interleave-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-merge-counts-mutmut-4/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-mode-mutmut-12/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-pairwise-differences-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-partition-by-sign-mutmut-4/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-rotate-left-mutmut-3/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-take-until-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-transpose-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-camel-to-snake-mutmut-10/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-count-substring-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-format-bytes-mutmut-31/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-format-initials-mutmut-2/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-longest-common-prefix-mutmut-11/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-mask-email-mutmut-17/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-normalize-newlines-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-normalize-spaces-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-parse-csv-line-mutmut-1/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-parse-key-values-mutmut-19/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-redact-terms-mutmut-12/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-remove-duplicate-words-mutmut-4/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-slugify-mutmut-10/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-split-sentences-mutmut-2/task.json",
+    "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-strip-prefixes-mutmut-1/task.json"
+  ],
+  "manual_challenge_task_count": 8,
+  "mutmut_task_count": 45,
+  "sanity_task_count_excluded": 12,
+  "schema_version": "1.0",
+  "suite_id": "patchpilot-primary-research-benchmark",
+  "task_count": 53,
+  "tasks": [
+    {
+      "defect_category": "state_machine_parser",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-csv-record-parser/task.json",
+      "origin_type": "manual_challenge",
+      "task_id": "challenge-csv-record-parser"
+    },
+    {
+      "defect_category": "cursor_state_protocol",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-cursor-pagination/task.json",
+      "origin_type": "manual_challenge",
+      "task_id": "challenge-cursor-pagination"
+    },
+    {
+      "defect_category": "recursive_data_merge",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-deep-config-merge/task.json",
+      "origin_type": "manual_challenge",
+      "task_id": "challenge-deep-config-merge"
+    },
+    {
+      "defect_category": "multi_line_interval_logic",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-interval-merge/task.json",
+      "origin_type": "manual_challenge",
+      "task_id": "challenge-interval-merge"
+    },
+    {
+      "defect_category": "transactional_state_management",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-inventory-reservation/task.json",
+      "origin_type": "manual_challenge",
+      "task_id": "challenge-inventory-reservation"
+    },
+    {
+      "defect_category": "idempotent_financial_state",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-ledger-reconciliation/task.json",
+      "origin_type": "manual_challenge",
+      "task_id": "challenge-ledger-reconciliation"
+    },
+    {
+      "defect_category": "stateful_window_algorithm",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-rolling-rate-limit/task.json",
+      "origin_type": "manual_challenge",
+      "task_id": "challenge-rolling-rate-limit"
+    },
+    {
+      "defect_category": "graph_algorithm_invariant",
+      "difficulty": "hard",
+      "manifest_path": "challenge_benchmarks/challenge-topological-order/task.json",
+      "origin_type": "manual_challenge",
+      "task_id": "challenge-topological-order"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-add-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-add-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_constant",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10"
+    },
+    {
+      "defect_category": "mutmut_constant",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-factorial-mutmut-10/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-factorial-mutmut-10"
+    },
+    {
+      "defect_category": "mutmut_collection",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-flatten-once-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-flatten-once-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-gcd-mutmut-6/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-gcd-mutmut-6"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-has-balanced-parentheses-mutmut-11/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-has-balanced-parentheses-mutmut-11"
+    },
+    {
+      "defect_category": "mutmut_comparison",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-is-even-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-is-even-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_comparison",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-is-palindrome-mutmut-5/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-is-palindrome-mutmut-5"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-lcm-mutmut-10/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-lcm-mutmut-10"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-median-mutmut-15/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-median-mutmut-15"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-merge-sorted-mutmut-12/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-merge-sorted-mutmut-12"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-multiply-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-multiply-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_constant",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-normalize-whitespace-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-normalize-whitespace-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-safe-divide-mutmut-6/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-alg-mutmut-algorithms-core-x-safe-divide-mutmut-6"
+    },
+    {
+      "defect_category": "mutmut_collection",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-bounded-slice-mutmut-20/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-bounded-slice-mutmut-20"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-chunked-mutmut-10/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-chunked-mutmut-10"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-cumulative-sum-mutmut-5/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-cumulative-sum-mutmut-5"
+    },
+    {
+      "defect_category": "mutmut_boolean",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-first-non-none-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-first-non-none-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_collection",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-flatten-once-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-flatten-once-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-frequency-map-mutmut-3/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-frequency-map-mutmut-3"
+    },
+    {
+      "defect_category": "mutmut_boolean",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-index-of-max-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-index-of-max-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_collection",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-interleave-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-interleave-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-merge-counts-mutmut-4/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-merge-counts-mutmut-4"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-mode-mutmut-12/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-mode-mutmut-12"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-pairwise-differences-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-pairwise-differences-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_boundary",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-partition-by-sign-mutmut-4/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-partition-by-sign-mutmut-4"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-rotate-left-mutmut-3/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-rotate-left-mutmut-3"
+    },
+    {
+      "defect_category": "mutmut_collection",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-take-until-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-take-until-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_boolean",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_collections/mutmut-col-mutmut-collections-core-x-transpose-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-col-mutmut-collections-core-x-transpose-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-camel-to-snake-mutmut-10/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-camel-to-snake-mutmut-10"
+    },
+    {
+      "defect_category": "mutmut_boolean",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-count-substring-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-count-substring-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-format-bytes-mutmut-31/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-format-bytes-mutmut-31"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-format-initials-mutmut-2/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-format-initials-mutmut-2"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-longest-common-prefix-mutmut-11/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-longest-common-prefix-mutmut-11"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-mask-email-mutmut-17/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-mask-email-mutmut-17"
+    },
+    {
+      "defect_category": "mutmut_constant",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-normalize-newlines-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-normalize-newlines-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_constant",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-normalize-spaces-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-normalize-spaces-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_boolean",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-parse-csv-line-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-parse-csv-line-mutmut-1"
+    },
+    {
+      "defect_category": "mutmut_boolean",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-parse-key-values-mutmut-19/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-parse-key-values-mutmut-19"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-redact-terms-mutmut-12/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-redact-terms-mutmut-12"
+    },
+    {
+      "defect_category": "mutmut_boolean",
+      "difficulty": "medium",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-remove-duplicate-words-mutmut-4/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-remove-duplicate-words-mutmut-4"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-slugify-mutmut-10/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-slugify-mutmut-10"
+    },
+    {
+      "defect_category": "mutmut_arithmetic",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-split-sentences-mutmut-2/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-split-sentences-mutmut-2"
+    },
+    {
+      "defect_category": "mutmut_constant",
+      "difficulty": "easy",
+      "manifest_path": "generated_benchmarks/mutmut_textdata/mutmut-txt-mutmut-textdata-core-x-strip-prefixes-mutmut-1/task.json",
+      "origin_type": "mutmut",
+      "task_id": "mutmut-txt-mutmut-textdata-core-x-strip-prefixes-mutmut-1"
+    }
+  ]
+}

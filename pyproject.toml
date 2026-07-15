@@ -19,7 +19,14 @@ dev = [
     "pytest-cov>=5,<7",
     "ruff>=0.5,<1",
     "mypy>=1.10,<2",
-    "mutmut>=3,<4",
+    "mutmut==3.6.0",
+]
+
+analysis = [
+    "matplotlib>=3.9,<4",
+    "numpy>=2,<3",
+    "pandas>=2.2,<3",
+    "scipy>=1.13,<2",
 ]
 
 [project.scripts]
@@ -33,6 +40,7 @@ testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 
 [tool.ruff]
+extend-exclude = ["artifacts", "generated_benchmarks", "challenge_benchmarks"]
 line-length = 88
 target-version = "py312"
 

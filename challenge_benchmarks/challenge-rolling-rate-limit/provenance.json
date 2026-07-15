@@ -1,0 +1,41 @@
+{
+  "changed_line_count": 14,
+  "clean_reference_validation": {
+    "hidden_passed": true,
+    "hidden_returncode": 0,
+    "visible_passed": true,
+    "visible_returncode": 0
+  },
+  "clean_source_sha256": "dfb4c62b4a10386b56c3c5158e220381bfdf5d23b00443ebd5988326610d5bc3",
+  "defect_category": "stateful_window_algorithm",
+  "defect_diff": "--- a/src/ratelimit.py\n+++ b/src/ratelimit.py\n@@ -12,24 +12,18 @@\n     window: int,\n ) -> list[bool]:\n     \"\"\"Return admission decisions for monotonic integer timestamps.\"\"\"\n-    if limit <= 0 or window <= 0:\n+    if limit < 0 or window < 0:\n         raise ValueError(\"limit and window must be positive\")\n \n     accepted: deque[int] = deque()\n     decisions: list[bool] = []\n-    previous: int | None = None\n \n     for timestamp in timestamps:\n-        if previous is not None and timestamp < previous:\n-            raise ValueError(\"timestamps must be monotonic\")\n-        previous = timestamp\n-\n-        while accepted and accepted[0] <= timestamp - window:\n+        while accepted and accepted[0] < timestamp - window:\n             accepted.popleft()\n \n-        allowed = len(accepted) < limit\n+        allowed = len(accepted) <= limit\n         decisions.append(allowed)\n-        if allowed:\n-            accepted.append(timestamp)\n+        accepted.append(timestamp)\n \n     return decisions\n",
+  "defect_patterns": [
+    "wrong_expiry_boundary",
+    "rejected_state_leak",
+    "missing_validation"
+  ],
+  "defective_source_sha256": "1aca09ea942f6cdfeb42478f3820df0206f08241a28a4a5888b408e84bb2d7a1",
+  "difficulty": "hard",
+  "generation": {
+    "command": "python scripts/create_manual_challenges.py --force --timeout-seconds 60",
+    "deterministic": true,
+    "script": "scripts/create_manual_challenges.py"
+  },
+  "hidden_tests_tree_sha256": "4fc3bb61aeb3a8abdceb591180d2fbfcf3c65ada5c30c6d95479c4649090009c",
+  "hidden_validation": {
+    "collected_tests": 3,
+    "failed": 3,
+    "returncode": 1
+  },
+  "origin_type": "manual_challenge",
+  "rationale": "Multiple state transitions must be corrected together to preserve rolling-window invariants.",
+  "repository_tree_sha256": "df34d7d9cab5b7856cec863386be3229334c5d7dfd4b6f1a728b61734945cbf0",
+  "schema_version": "1.0",
+  "selection_rank": 5,
+  "source_file": "src/ratelimit.py",
+  "task_id": "challenge-rolling-rate-limit",
+  "visible_validation": {
+    "failed": 3,
+    "returncode": 1
+  }
+}

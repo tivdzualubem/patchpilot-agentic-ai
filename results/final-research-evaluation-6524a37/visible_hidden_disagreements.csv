@@ -1,0 +1,7 @@
+task_id,condition,origin_type,difficulty,succeeded,hidden_suite_status,hidden_verified_success,elapsed_seconds
+mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10,one-shot,mutmut,easy,True,failed,False,78.17132731299989
+mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10,fixed-workflow,mutmut,easy,True,failed,False,74.80325598499985
+mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10,tool-agent-no-reflection,mutmut,easy,True,failed,False,267.02496262099885
+mutmut-txt-mutmut-textdata-core-x-parse-key-values-mutmut-19,tool-agent-no-reflection,mutmut,medium,True,failed,False,291.8083680990021
+mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10,full-reflective-agent,mutmut,easy,True,failed,False,258.21604942299746
+mutmut-txt-mutmut-textdata-core-x-parse-csv-line-mutmut-1,full-reflective-agent,mutmut,medium,True,failed,False,224.8152430780028
