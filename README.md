@@ -8,49 +8,72 @@ app_port: 8501
 pinned: false
 ---
 
-# PatchPilot: A Tool-Using Agent for Python Debugging and Repair
+# PatchPilot: A Safety-Constrained Tool-Using Agent for Python Debugging and Repair
 
-PatchPilot is a bounded Agentic AI system for Python debugging and repair. Given a small Python repository with failing tests, it reproduces the failure, inspects source code through restricted tools, applies a controlled patch, verifies the result with pytest, and reports success only when the current repository revision passes the configured test command.
+PatchPilot is a bounded agentic system for repairing small Python repositories with executable pytest suites. A language-model policy proposes structured actions, while the runtime validates tool arguments, restricts editable paths, protects tests, applies controlled patches, records traces, and accepts a repair only after executable verification.
 
-The project focuses on safe, auditable tool use rather than unrestricted code generation. The language model proposes actions, while the PatchPilot runtime validates tool calls, restricts editable paths, applies patches, rolls back failed edits, enforces budgets, and records machine-readable traces for each run.
+This repository contains the implementation, benchmark corpus, four-condition evaluation, statistical analysis, live Streamlit demonstration, and final research report.
 
-## Highlights
+## Research snapshot
 
-- Test-driven Python repair with a bounded tool loop.
-- Tools for running tests, searching code, reading files, applying patches, restoring files, and finishing runs.
-- Isolated workspace per benchmark run.
-- Manifest-level `allowed_paths` and `forbidden_paths` safety boundaries.
-- Patch rollback after failed verification.
-- Step, tool-call, patch-attempt, and runtime budgets.
-- Local Ollama/Qwen model backend.
-- Streamlit live demo for both controlled and mutmut-generated tasks.
-- Reproducible benchmark generation, evaluation scripts, result CSVs, figures, and tables.
+The final paired evaluation used **53 tasks** under **four conditions**, producing **212 completed runs** with `qwen2.5-coder:3b`.
 
-## Architecture
+| Condition | Hidden-verified repairs | Rate | Mean runtime |
+| --- | ---: | ---: | ---: |
+| One-shot | 37/53 | 69.8% | 86.53 s |
+| Fixed workflow | 37/53 | 69.8% | 105.74 s |
+| Full reflective agent | 34/53 | 64.2% | 249.64 s |
+| Tool agent without reflection | 31/53 | 58.5% | 350.12 s |
+
+The global paired comparison produced Cochran's \(Q(3)=11.00\), \(p=0.0117\). No pairwise exact McNemar comparison remained significant after Holm correction. The configured reflective condition recorded zero completed reflection events in the final traces, so the results do **not** establish a causal benefit from reflection.
+
+All four conditions failed the eight manually authored hard challenges. Results therefore describe this benchmark and configuration rather than general software-repair capability.
+
+Detailed evidence:
+
+- [Final research report](docs/PatchPilot_Final_Report.pdf)
+- [Reproducible report source](docs/final_report/)
+- [Final statistical analysis](results/final-research-evaluation-6524a37/PatchPilot_Final_Statistical_Analysis.md)
+- [Machine-readable final results](results/final-research-evaluation-6524a37/)
+- [Final evaluation figures](docs/report_assets/final_evaluation/)
+
+## System architecture
 
 ```text
-Benchmark task
+Task manifest
   -> isolated workspace
-  -> structured LLM repair policy
-  -> validated tool action
-  -> restricted tool executor
+  -> structured policy action
+  -> schema and path validation
+  -> bounded tool execution
   -> observation and trace update
-  -> verified success, escalation, or budget exhaustion
+  -> patch verification
+  -> verified success or bounded termination
 ```
 
-The model does not directly edit repository files. PatchPilot validates and executes all actions through controlled tools.
+The model does not receive unrestricted shell or repository access. PatchPilot exposes a compact tool interface for:
+
+- running tests;
+- searching and reading source files;
+- applying and restoring source patches;
+- recording completion only after verification.
+
+Task manifests define editable and forbidden paths. The executor validates tool-specific arguments, blocks protected-file edits, enforces budgets, and records machine-readable run traces.
 
 ## Repository layout
 
 ```text
-benchmark_seeds/                         Seed projects for generated benchmarks
-benchmarks/                              Controlled repair benchmark tasks
-generated_benchmarks/mutmut_algorithms/  Mutmut-generated repair benchmark
-demo/                                    Streamlit live demo
-docs/                                    Documentation and report assets
-docs/report_assets/                      Generated figures and tables
-results/                                 Committed machine-readable result summaries
-scripts/                                 Benchmark, demo, evaluation, and asset scripts
+benchmark_seeds/                         Seed projects used for generated tasks
+benchmarks/                              Controlled benchmark tasks
+challenge_benchmarks/                    Manually authored hard challenges
+generated_benchmarks/                    Generated tasks and research catalog
+generated_benchmarks/research_suite.json Canonical 53-task research suite
+demo/                                    Streamlit live-repair demonstration
+docs/PatchPilot_Final_Report.pdf         Final polished research report
+docs/final_report/                       LaTeX source, assets, and build script
+docs/report_assets/                      Committed evaluation and UI figures
+results/final-research-evaluation-6524a37/
+                                         Final statistics and task-level outcomes
+scripts/                                 Demo, benchmark, evaluation, and analysis tools
 src/patchpilot/                          PatchPilot package
 tests/                                   Unit and integration tests
 ```
@@ -59,14 +82,15 @@ tests/                                   Unit and integration tests
 
 - Python 3.12
 - Git
-- Ollama for live local model runs
-- `qwen2.5-coder:1.5b` for the default local demo
+- Ollama for live model-backed runs
+- `qwen2.5-coder:3b`
+- Streamlit dependencies for the graphical demo
 - Docker only for the optional containerized frontend
 
-Install the default model:
+Install the validated local model:
 
 ```bash
-ollama pull qwen2.5-coder:1.5b
+ollama pull qwen2.5-coder:3b
 ```
 
 ## Installation
@@ -75,60 +99,39 @@ ollama pull qwen2.5-coder:1.5b
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,analysis]"
+python -m pip install -r demo/requirements-demo.txt
 ```
 
-Run the quality gate:
+## Verified quality gate
+
+The final repository gate completed with:
+
+```text
+274 tests passed
+Ruff passed
+mypy passed on 32 source files
+git diff --check passed
+```
+
+Run the same code-quality checks:
 
 ```bash
-python -m pytest -q
 python -m ruff check .
+python -m pytest -q
 python -m mypy src
 git diff --check
 ```
 
-Current verified status:
+## Live repair demonstration
 
-```text
-107 tests passed
-ruff passed
-mypy passed
-git diff --check passed
-```
-
-## Live repair demo from the CLI
-
-Controlled task:
+Start Ollama and confirm that the model is available:
 
 ```bash
-python scripts/run_demo_task.py \
-  --task-id calculator-001 \
-  --manifest-path benchmarks/calculator-001/task.json \
-  --model qwen2.5-coder:1.5b \
-  --output-root artifacts/demo_smoke_controlled
+ollama list
 ```
 
-Mutmut-generated task:
-
-```bash
-python scripts/run_demo_task.py \
-  --task-id mutmut-alg-mutmut-algorithms-core-x-add-mutmut-1 \
-  --manifest-path generated_benchmarks/mutmut_algorithms/mutmut-alg-mutmut-algorithms-core-x-add-mutmut-1/task.json \
-  --model qwen2.5-coder:1.5b \
-  --output-root artifacts/demo_smoke_mutmut
-```
-
-A successful run returns JSON with `status: succeeded`, `full_suite_passed: true`, and one or more changed source files. Runtime outputs are written under `artifacts/`, which is intentionally ignored by Git.
-
-## Streamlit live demo
-
-Install demo dependencies:
-
-```bash
-python -m pip install -r demo/requirements-demo.txt
-```
-
-Run the UI:
+Launch the Streamlit application:
 
 ```bash
 streamlit run demo/streamlit_app.py \
@@ -137,188 +140,181 @@ streamlit run demo/streamlit_app.py \
   --server.port 8501
 ```
 
-Open:
+Open `http://localhost:8501`.
 
-```text
-http://localhost:8501
-```
+The demonstration lets a user:
 
-The UI supports both controlled tasks and mutmut-generated tasks. It lets a user select a task, inspect source and tests, run PatchPilot live, view the tool timeline, inspect the patch diff, and confirm pytest verification.
+1. select a prepared defective task;
+2. inspect its source and regression tests;
+3. run PatchPilot with the local model;
+4. review executable verification, the agent trajectory, and the generated patch.
 
-Hosted frontend:
+The hosted frontend is available at:
 
 ```text
 https://lubem-patchpilot-agentic-ai.hf.space/
 ```
 
-The Hugging Face Space loads the frontend. Live repair requires access to an Ollama server, so local execution is the reliable live demonstration path.
+A local Ollama environment remains the reliable path for live repair execution.
 
-## Docker frontend
+### Command-line demo
 
 ```bash
-docker compose up --build
+python scripts/run_demo_task.py \
+  --task-id calculator-001 \
+  --manifest-path benchmarks/calculator-001/task.json \
+  --model qwen2.5-coder:3b
 ```
 
-Then open:
+A verified successful result includes:
 
 ```text
-http://localhost:8501
+status: succeeded
+full_suite_passed: true
 ```
 
-Live repair inside Docker requires the container to reach a running Ollama service.
+Runtime workspaces and raw traces are written under `artifacts/`, which is intentionally ignored by Git.
 
-## Evaluation summary
+## Research corpus
 
-PatchPilot is evaluated on four tracks.
-
-| Benchmark | Purpose | Result |
-| --- | --- | --- |
-| Controlled benchmark | End-to-end sanity check | Full, one-shot, and no-retry all reached 12/12 |
-| Mutmut-generated benchmark | Primary ablation benchmark | Full 8/20, one-shot 6/20, no-retry 5/20 |
-| QuixBugs smoke | External generalization check | 3/8 repaired |
-| SWE-bench Lite | Official-harness feasibility check | Attempted; full run blocked by local WSL/Docker I/O instability |
-
-Primary mutmut result:
+The canonical suite is defined by:
 
 ```text
-Full agent: 8/20 = 40%
-One-shot: 6/20 = 30%
-No-retry: 5/20 = 25%
-Invalid patch rate: 0% for all three conditions
+generated_benchmarks/research_suite.json
 ```
 
-The controlled benchmark is saturated and is used as a reliability check, not as a superiority claim. The mutmut-generated benchmark is the main ablation comparison.
+It contains:
 
-Committed result summaries are in `results/`. Generated report figures and tables are in `docs/report_assets/`.
+- 45 Mutmut-derived tasks;
+- 8 manually authored hard challenges;
+- 53 primary research tasks in total.
 
-## Reproducing evaluations
+Twelve controlled sanity tasks are maintained separately and are not part of the final 53-task primary comparison.
 
-Run the controlled benchmark:
+Validate the corpus:
+
+```bash
+python scripts/validate_research_benchmarks.py
+python scripts/validate_mutmut_research_suite.py
+```
+
+## Reproducing the four-condition evaluation
+
+The evaluation runner defaults to the canonical research catalog and `qwen2.5-coder:3b`.
 
 ```bash
 python scripts/run_evaluation.py \
-  --condition full-live-qwen \
-  --output-root artifacts/evaluation_controlled_full
-
-python scripts/run_evaluation.py \
-  --condition one-shot-live-qwen \
-  --output-root artifacts/evaluation_controlled_oneshot
-
-python scripts/run_evaluation.py \
-  --condition no-retry-live-qwen \
-  --output-root artifacts/evaluation_controlled_noretry
+  --condition all \
+  --model qwen2.5-coder:3b \
+  --catalog generated_benchmarks/research_suite.json \
+  --output-root artifacts/evaluation \
+  --experiment-id reproduction-3b
 ```
 
-Regenerate the mutmut benchmark from the seed project:
+The four primary conditions are:
+
+1. `one-shot`
+2. `fixed-workflow`
+3. `tool-agent-no-reflection`
+4. `full-reflective-agent`
+
+The runner writes an experiment configuration, condition-level CSV and JSON summaries, a combined `runs.csv`, and trace artifacts beneath the selected output root.
+
+The published final experiment is:
+
+```text
+final-research-evaluation-6524a37-20260714-090253
+evaluated commit: 6524a37d802fc83faa9db0111facaf491da4e618
+```
+
+## Reproducing the statistical analysis
+
+After an evaluation has produced a combined `runs.csv`:
 
 ```bash
-python scripts/generate_mutmut_benchmark.py \
-  --source-root benchmark_seeds/mutmut_algorithms \
-  --source-path src/mutmut_algorithms \
-  --test-path tests \
-  --pytest-pythonpath src \
-  --output-root generated_benchmarks/mutmut_algorithms \
-  --task-prefix mutmut-alg \
-  --max-tasks 20 \
-  --force
+python scripts/analyze_final_evaluation.py \
+  artifacts/evaluation/<EXPERIMENT_ID>/runs.csv \
+  --output-dir results/reproduced-analysis
 ```
 
-Run mutmut evaluations:
+The analysis produces condition summaries, task-level outcomes, failure taxonomy, exact paired McNemar tests with Holm correction, latency comparisons, and a machine-readable JSON summary.
+
+The committed final analysis is under:
+
+```text
+results/final-research-evaluation-6524a37/
+```
+
+## Evaluation interpretation
+
+The final results support several bounded observations:
+
+- One-shot and fixed workflow had the highest hidden-verified success rate in this experiment.
+- The reflective configuration outperformed the no-reflection tool agent descriptively, but the trace data recorded no completed reflection events.
+- Agentic conditions required substantially more runtime than the baselines.
+- Hidden verification exposed a small number of visible/hidden disagreements.
+- The manually authored hard subset remained unsolved by every condition.
+
+These findings do not establish general superiority of one architecture, reflection as a causal mechanism, or production-level repair performance.
+
+## Safety and observability
+
+PatchPilot's runtime includes:
+
+- Pydantic-validated tool-specific arguments;
+- canonicalization of supported argument aliases;
+- manifest-defined editable and forbidden paths;
+- protected regression tests;
+- isolated task workspaces;
+- step, patch, tool-call, and runtime budgets;
+- patch restoration and bounded termination;
+- visible and hidden executable verification;
+- machine-readable actions, observations, outcomes, and metadata.
+
+A zero invalid-patch count in the final evaluation means no run ended with a counted invalid-patch outcome under the implemented checks. It is not a claim that a language model cannot propose incorrect or unsafe code.
+
+## Final report
+
+The polished 17-page report is committed at:
+
+```text
+docs/PatchPilot_Final_Report.pdf
+```
+
+Its reproducible source package is at:
+
+```text
+docs/final_report/
+```
+
+Where a LaTeX installation is available:
 
 ```bash
-python scripts/run_evaluation.py \
-  --condition full-live-qwen \
-  --manifest-root generated_benchmarks/mutmut_algorithms \
-  --output-root artifacts/evaluation_mutmut_algorithms
-
-python scripts/run_evaluation.py \
-  --condition one-shot-live-qwen \
-  --manifest-root generated_benchmarks/mutmut_algorithms \
-  --output-root artifacts/evaluation_mutmut_algorithms_oneshot
-
-python scripts/run_evaluation.py \
-  --condition no-retry-live-qwen \
-  --manifest-root generated_benchmarks/mutmut_algorithms \
-  --output-root artifacts/evaluation_mutmut_algorithms_noretry
+cd docs/final_report
+./build_report.sh
 ```
 
-Summarize paired mutmut outcomes:
+## Limitations
 
-```bash
-python scripts/summarize_mutmut_ablation.py \
-  --full artifacts/evaluation_mutmut_algorithms/<TIMESTAMP>/runs.csv \
-  --one-shot artifacts/evaluation_mutmut_algorithms_oneshot/<TIMESTAMP>/runs.csv \
-  --no-retry artifacts/evaluation_mutmut_algorithms_noretry/<TIMESTAMP>/runs.csv \
-  --output-csv results/mutmut_paired_outcomes.csv
+- The primary corpus contains 53 small Python repair tasks.
+- The eight manually authored hard tasks were unsolved by all conditions.
+- The evaluation used one local model and one fixed seed.
+- The configured reflective condition did not record completed reflection events.
+- Results are scaffold-, prompt-, model-, budget-, and benchmark-specific.
+- The system targets bounded source repair, not arbitrary repository maintenance.
+- Live model-backed execution depends on a local Ollama service.
+- The project does not claim completed SWE-bench performance or production readiness.
+
+## Citation
+
+For academic discussion, cite the repository and final report:
+
+```text
+Tivdzua Lubem Noah and Gisele Wiykiynyuy.
+PatchPilot: A Safety-Constrained Tool-Using Agent for Python Debugging and Repair.
+Master's Agentic AI Project Report, 2026.
 ```
-
-Run the QuixBugs smoke benchmark:
-
-```bash
-python scripts/run_quixbugs_smoke.py
-```
-
-Regenerate result tables and report figures:
-
-```bash
-python scripts/generate_report_assets.py
-```
-
-## Statistical comparison
-
-The mutmut benchmark uses paired task outcomes. Exact paired McNemar/binomial sign-test results are stored in `results/statistical_tests.csv`.
-
-| Comparison | First-only successes | Second-only successes | p-value |
-| --- | ---: | ---: | ---: |
-| Full agent vs one-shot | 2 | 0 | 0.5000 |
-| Full agent vs no-retry | 3 | 0 | 0.2500 |
-| One-shot vs no-retry | 1 | 0 | 1.0000 |
-
-The full agent has the highest mutmut repair rate, but the paired tests are not statistically significant at p < 0.05 because the benchmark contains 20 tasks.
-
-## Safety design
-
-PatchPilot uses a restricted execution boundary:
-
-- tool calls are schema-validated;
-- edits are limited to allowed source paths;
-- tests are protected from modification;
-- patch attempts are budgeted;
-- repeated no-progress actions are blocked;
-- failed patches can be restored before retry;
-- success requires a passing pytest run;
-- run traces are written for auditability.
-
-## Committed vs ignored files
-
-Committed:
-
-- source code;
-- benchmark definitions;
-- mutmut seed and generated benchmark tasks;
-- evaluation and demo scripts;
-- result summary CSVs;
-- final report assets.
-
-Ignored:
-
-- `artifacts/`;
-- raw workspaces;
-- raw traces;
-- temporary cloned repositories;
-- Python cache files;
-- Docker/runtime caches.
-
-## Known limitations
-
-- PatchPilot targets small Python repositories with pytest suites.
-- The repair policy is conservative and bounded.
-- The controlled benchmark is saturated.
-- The mutmut benchmark has limited statistical power at 20 tasks.
-- QuixBugs is used as a smoke test, not a full benchmark suite.
-- SWE-bench Lite full evaluation was not completed because the local WSL/Docker environment became unstable.
-- Live repair depends on a local Ollama model being available.
 
 ## License
 
-This project is released under the MIT License. See `LICENSE` for details.
+This project is released under the MIT License. See [LICENSE](LICENSE).
