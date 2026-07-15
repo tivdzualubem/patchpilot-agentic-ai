@@ -1,0 +1,10 @@
+condition,terminal_failure_category,runs
+one-shot,none_success_or_hidden_disagreement,38
+one-shot,user_escalated,9
+one-shot,decision_parse_error,6
+fixed-workflow,none_success_or_hidden_disagreement,38
+fixed-workflow,decision_parse_error,15
+tool-agent-no-reflection,none_success_or_hidden_disagreement,33
+tool-agent-no-reflection,decision_parse_error,20
+full-reflective-agent,none_success_or_hidden_disagreement,36
+full-reflective-agent,decision_parse_error,17
