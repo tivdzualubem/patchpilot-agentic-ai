@@ -1,0 +1,52 @@
+name: PatchPilot Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: patchpilot-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project and research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,analysis]"
+
+      - name: Validate research benchmark
+        run: python scripts/validate_research_benchmarks.py
+
+      - name: Validate Mutmut research suite
+        run: python scripts/validate_mutmut_research_suite.py
+
+      - name: Run Ruff
+        run: python -m ruff check .
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Run mypy
+        run: python -m mypy src
+
+      - name: Check repository whitespace
+        run: git diff --check
