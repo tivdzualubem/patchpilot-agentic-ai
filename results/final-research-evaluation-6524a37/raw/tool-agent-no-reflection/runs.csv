@@ -1,0 +1,534 @@
+run_id,task_id,condition,runtime_verification_mode,benchmark_suite,origin_type,difficulty,defect_category,status,succeeded,verified_success,unverified_success,full_suite_passed,hidden_suite_status,hidden_suite_configured,hidden_suite_passed,hidden_suite_test_count,hidden_verified_success,visible_hidden_disagreement,policy_failure,model_calls,decision_parse_failures,patch_rejection_count,patch_application_failure_count,verification_failure_count,failed_attempt_count,failed_attempt_ids,current_attempt_id,last_failed_attempt_id,last_rolled_back_attempt_id,last_failure_category,terminal_failure_category,steps,tool_calls,patch_attempts,successful_patch_count,elapsed_seconds,changed_file_count,changed_files,invalid_patch_count,rejected_tool_count,timeout_count,rollback_count,syntax_check_count,syntax_error_count,targeted_test_count,full_test_count,failed_test_count,finish_rejection_count,reflection_count,hypothesis_revision_count,no_progress_rejection_count,budget_exhausted,final_message
+tool-agent-no-reflection-challenge-csv-record-parser-final-research-evaluation-6524a37-eaaec3b7cf06,challenge-csv-record-parser,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,state_machine_parser,escalated,False,False,False,False,failed,True,False,3,False,False,True,5,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,6,6,1,1,562.5366391139978,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from typing import List
+
+def parse_record(record: str) -> List[str]:
+    """"""Parse one CSV record with commas and doubled-quote escapes.""""""
+    fields: List[str] = []
+    current_field = """"
+    quoted = False
+
+    for char in record:
+        if char == '""':
+            if quoted: Raw response: ```python
+from typing import List
+
+def parse_record(record: str) -> List[str]:
+    """"""Parse one CSV record with commas and doubled-quote escapes.""""""
+    fields: List[str] = []
+    current_field = """"
+    quoted = False
+
+    for char in record:
+        if char == '""':
+            if quoted:
+                # End of a quoted field
+                if current_field.strip():
+                    fields.append(current_field)
+                current_field = """"
+                quoted = False
+            e"
+tool-agent-no-reflection-challenge-cursor-pagination-final-research-evaluation-6524a37-e2e9be460862,challenge-cursor-pagination,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,cursor_state_protocol,escalated,False,False,False,False,failed,True,False,3,False,False,True,6,2,0,0,3,2,1;2,,2,2,decision_parse_error,decision_parse_error,10,10,2,2,488.14751556600095,0,,0,0,0,2,2,0,0,3,3,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from typing import Any
+
+def paginate(
+    items: list[Any],
+    *,
+    limit: int,
+    cursor: str | None = None,
+) -> tuple[list[Any], str | None]:
+    """"""Return one page and an opaque cursor for the next page.""""""
+    if limit < 0:
+        raise ValueError(""limit must be positive"") Raw response: ```python
+from typing import Any
+
+def paginate(
+    items: list[Any],
+    *,
+    limit: int,
+    cursor: str | None = None,
+) -> tuple[list[Any], str | None]:
+    """"""Return one page and an opaque cursor for the next page.""""""
+    if limit < 0:
+        raise ValueError(""limit must be positive"")
+    
+    offset = _decode_cursor(cursor)
+    next_offset = offset + limit
+    page = items[offset : next_offset]
+    next_cursor = _encode_cursor(len(page)) if page else None
+    
+    # Ensure no duplicates"
+tool-agent-no-reflection-challenge-deep-config-merge-final-research-evaluation-6524a37-a7be08f89752,challenge-deep-config-merge,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,recursive_data_merge,escalated,False,False,False,False,failed,True,False,3,False,False,True,6,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,8,8,1,1,503.7964041350024,0,,0,1,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+def merge_config(
+    base: dict[str, Any],
+    override: dict[str, Any],
+) -> dict[str, Any]:
+    """"""Deep-merge dictionaries without mutating either input.""""""
+    result = base.copy()
+    for key, value in override.items():
+        current = result.get(key)
+        if isinstance(current, Raw response: ```python
+def merge_config(
+    base: dict[str, Any],
+    override: dict[str, Any],
+) -> dict[str, Any]:
+    """"""Deep-merge dictionaries without mutating either input.""""""
+    result = base.copy()
+    for key, value in override.items():
+        current = result.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            result[key] = merge_config(current, value)
+        elif isinstance(current, list) and isinstance(value, list):
+            result[key] = current + value
+"
+tool-agent-no-reflection-challenge-interval-merge-final-research-evaluation-6524a37-20260714-090253,challenge-interval-merge,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,multi_line_interval_logic,escalated,False,False,False,False,failed,True,False,3,False,False,True,6,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,8,8,1,1,523.0349273680004,0,,0,1,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from typing import *
+from collections import *
+
+def merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """"""Merge overlapping or touching closed intervals.""""""
+    normalized = [(start, end) for start, end in intervals]
+    if not normalized:
+        return [] Raw response: ```python
+from typing import *
+from collections import *
+
+def merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """"""Merge overlapping or touching closed intervals.""""""
+    normalized = [(start, end) for start, end in intervals]
+    if not normalized:
+        return []
+
+    normalized.sort(key=lambda item: (item[1], item[0]))
+    merged: list[tuple[int, int]] = [normalized[0]]
+
+    for start, end in normalized[1:]:
+        previous_start, previous_end = merged[-1]
+    "
+tool-agent-no-reflection-challenge-inventory-reservation-final-research-evaluation-6524-2c2780c1c769,challenge-inventory-reservation,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,transactional_state_management,escalated,False,False,False,False,failed,True,False,3,False,False,True,5,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,6,6,1,1,309.8374353319996,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from typing import Dict, List, Tuple
+
+def reserve_inventory(
+    stock: Dict[str, int],
+    requests: List[Tuple[str, int]],
+) -> dict[str, int]:
+    """"""Return remaining stock after atomically applying reservations.""""""
+    remaining = stock.copy()  # Create a copy of the stock to avoid mut Raw response: ```python
+from typing import Dict, List, Tuple
+
+def reserve_inventory(
+    stock: Dict[str, int],
+    requests: List[Tuple[str, int]],
+) -> dict[str, int]:
+    """"""Return remaining stock after atomically applying reservations.""""""
+    remaining = stock.copy()  # Create a copy of the stock to avoid mutation
+    for sku, quantity in requests:
+        if quantity < 0:
+            raise ValueError(""requested quantities must be positive"")
+        if sku not in remaining:
+            raise KeyError(sku)"
+tool-agent-no-reflection-challenge-ledger-reconciliation-final-research-evaluation-6524-7c8ba3277752,challenge-ledger-reconciliation,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,idempotent_financial_state,escalated,False,False,False,False,failed,True,False,3,False,False,True,6,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,8,8,1,1,460.1762922480011,0,,0,1,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from typing import Dict, Iterable
+
+class Transfer:
+    def __init__(self, transaction_id: str, source: str, destination: str, amount: int):
+        self.transaction_id = transaction_id
+        self.source = source
+        self.destination = destination
+        self.amount = amount
+
+def rec Raw response: ```python
+from typing import Dict, Iterable
+
+class Transfer:
+    def __init__(self, transaction_id: str, source: str, destination: str, amount: int):
+        self.transaction_id = transaction_id
+        self.source = source
+        self.destination = destination
+        self.amount = amount
+
+def reconcile(
+    balances: dict[str, int],
+    transfers: Iterable[Transfer],
+) -> dict[str, int]:
+    """"""Apply unique positive transfers without mutating input balances.""""""
+    result = balances.copy()
+  "
+tool-agent-no-reflection-challenge-rolling-rate-limit-final-research-evaluation-6524a37-4118c3ba6e2d,challenge-rolling-rate-limit,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,stateful_window_algorithm,escalated,False,False,False,False,failed,True,False,3,False,False,True,5,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,4,4,0,0,287.4425930739999,0,,0,1,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: from collections import deque
+
+def admit_events(
+    timestamps: list[int],
+    *,
+    limit: int,
+    window: int,
+) -> list[bool]:
+    """"""Return admission decisions for monotonic integer timestamps.""""""
+    if limit < 0 or window < 0:
+        raise ValueError(""limit and window must be positive"")
+
+    accepted: deque[int] = deque()
+    decisions: list[bool] = []
+
+    for timestamp in timestamps:
+        while accepted and accepted[0] < timestamp - window:
+            accepted.popleft()
+
+         First invalid response: ```python
+from collections import deque
+
+def admit_events(
+    timestamps: list[int],
+    *,
+    limit: int,
+    window: int,
+) -> list[bool]:
+    """"""Return admission decisions for monotonic integer timestamps.""""""
+    if limit < 0 or window < 0:
+        raise ValueError(""limit and window must be pos Raw response: ```python
+from collections import deque
+
+def admit_events(
+    timestamps: list[int],
+    *,
+    limit: int,
+    window: int,
+) -> list[bool]:
+    """"""Return admission decisions for monotonic integer timestamps.""""""
+    if limit < 0 or window < 0:
+        raise ValueError(""limit and window must be positive"")
+
+    accepted: deque[int] = deque()
+    decisions: list[bool] = []
+
+    for timestamp in timestamps:
+        while accepted and accepted[0] < timestamp - window:
+            accepted.popleft()"
+tool-agent-no-reflection-challenge-topological-order-final-research-evaluation-6524a37-c3e04fb1e3b4,challenge-topological-order,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,graph_algorithm_invariant,escalated,False,False,False,False,failed,True,False,3,False,False,True,6,3,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,7,7,1,1,577.8596224860012,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+def dependency_order(graph: dict[str, set[str]]) -> list[str]:
+    """"""Return a deterministic topological order for node prerequisites.""""""
+    nodes = set(graph)
+    
+    dependents: dict[str, set[str]] = {node: set() for node in nodes}
+    indegree = {node: 0 for node in nodes}
+    for nod Raw response: ```python
+def dependency_order(graph: dict[str, set[str]]) -> list[str]:
+    """"""Return a deterministic topological order for node prerequisites.""""""
+    nodes = set(graph)
+    
+    dependents: dict[str, set[str]] = {node: set() for node in nodes}
+    indegree = {node: 0 for node in nodes}
+    for node, prerequisites in graph.items():
+        for prerequisite in prerequisites:
+            dependents.setdefault(node, set()).add(prerequisite)
+            indegree[prerequisite] += 1
+ 
+    ready = [no"
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-add-mutmut-1-final-researc-d00cf8137108,mutmut-alg-mutmut-algorithms-core-x-add-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,233.25372221900034,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10-final-rese-477277f835a7,mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,failed,True,False,8,False,True,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,267.02496262099885,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1-fina-779df54bd36b,mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,278.96516457300095,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-factorial-mutmut-10-final-547d646bdbc1,mutmut-alg-mutmut-algorithms-core-x-factorial-mutmut-10,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,4,0,0,0,1,0,,,,,test_verification_failed,,7,7,1,1,394.1696275329996,1,src/mutmut_algorithms/core.py,0,1,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-flatten-once-mutmut-1-fina-e793e96aa119,mutmut-alg-mutmut-algorithms-core-x-flatten-once-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_collection,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,319.0007579259982,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-gcd-mutmut-6-final-researc-909146ecd7e1,mutmut-alg-mutmut-algorithms-core-x-gcd-mutmut-6,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,8,False,False,True,5,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,4,4,0,0,314.96998443600023,0,,0,1,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: from math import gcd
+
+def gcd(a: int, b: int) -> int:
+    while b != 0:
+        a, b = b, a % b
+    return a First invalid response: ```python
+from math import gcd
+
+def gcd(a: int, b: int) -> int:
+    return a if b == 0 else gcd(b, a % b)
+``` Raw response: ```python
+from math import gcd
+
+def gcd(a: int, b: int) -> int:
+    while b != 0:
+        a, b = b, a % b
+    return a
+```"
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-has-balanced-parentheses-m-7f7c2ee1b385,mutmut-alg-mutmut-algorithms-core-x-has-balanced-parentheses-mutmut-11,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,343.74677656100175,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-is-even-mutmut-1-final-res-5d678e8ee939,mutmut-alg-mutmut-algorithms-core-x-is-even-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_comparison,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,283.1256952949989,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-is-palindrome-mutmut-5-fin-fd4918c07e7a,mutmut-alg-mutmut-algorithms-core-x-is-palindrome-mutmut-5,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_comparison,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,272.0256395569995,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-lcm-mutmut-10-final-resear-37db3c192a32,mutmut-alg-mutmut-algorithms-core-x-lcm-mutmut-10,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,284.9593479460018,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-median-mutmut-15-final-res-5de6e0f2f19b,mutmut-alg-mutmut-algorithms-core-x-median-mutmut-15,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,305.062046836003,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-merge-sorted-mutmut-12-fin-91ae0841a6eb,mutmut-alg-mutmut-algorithms-core-x-merge-sorted-mutmut-12,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,347.3360054920013,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-multiply-mutmut-1-final-re-fe348c7155e3,mutmut-alg-mutmut-algorithms-core-x-multiply-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,272.56411992799985,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-normalize-whitespace-mutmu-0fb50a2c4afd,mutmut-alg-mutmut-algorithms-core-x-normalize-whitespace-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,281.3261722390016,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-alg-mutmut-algorithms-core-x-safe-divide-mutmut-6-final-11c3488d6a1d,mutmut-alg-mutmut-algorithms-core-x-safe-divide-mutmut-6,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,299.9758817340007,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-bounded-slice-mutmut-20-f-1b4ffdd40c34,mutmut-col-mutmut-collections-core-x-bounded-slice-mutmut-20,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_collection,escalated,False,False,False,False,failed,True,False,9,False,False,True,4,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,2,2,0,0,212.65844062700126,0,,0,0,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: def bounded_slice(
+    values: Sequence[int],
+    start: int,
+    stop: int,
+) -> list[int]:
+    """"""Return a slice after clamping bounds into the sequence range.""""""
+    lower = max(0, min(start, len(values)))
+    upper = max(lower, min(stop, len(values)))
+    return list(range(lower, upper + 1)) First invalid response: ```python
+def bounded_slice(
+    values: Sequence[int],
+    start: int,
+    stop: int,
+) -> list[int]:
+    """"""Return a slice after clamping bounds into the sequence range.""""""
+    lower = max(0, min(start, len(values)))
+    upper = max(lower, min(stop, len(values)))
+    return list(range(lower, upper Raw response: ```python
+def bounded_slice(
+    values: Sequence[int],
+    start: int,
+    stop: int,
+) -> list[int]:
+    """"""Return a slice after clamping bounds into the sequence range.""""""
+    lower = max(0, min(start, len(values)))
+    upper = max(lower, min(stop, len(values)))
+    return list(range(lower, upper + 1))
+```"
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-chunked-mutmut-10-final-r-d32aeee20088,mutmut-col-mutmut-collections-core-x-chunked-mutmut-10,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,312.4014602049974,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-cumulative-sum-mutmut-5-f-e8e8e15c1eb8,mutmut-col-mutmut-collections-core-x-cumulative-sum-mutmut-5,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,5,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,4,4,0,0,329.21249366199845,0,,0,1,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: def cumulative_sum(lst: list) -> list:
+    result = []
+    current_sum = 0
+    for num in lst:
+        current_sum += num
+        result.append(current_sum)
+    return result First invalid response: ```python
+def cumulative_sum(lst: list) -> list:
+    return [sum(lst[:i+1]) for i in range(len(lst))]
+``` Raw response: ```python
+def cumulative_sum(lst: list) -> list:
+    result = []
+    current_sum = 0
+    for num in lst:
+        current_sum += num
+        result.append(current_sum)
+    return result
+```"
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-first-non-none-mutmut-1-f-fc753b30876d,mutmut-col-mutmut-collections-core-x-first-non-none-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,302.043329529999,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-flatten-once-mutmut-1-fin-ff3f11b69029,mutmut-col-mutmut-collections-core-x-flatten-once-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_collection,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,292.70426818899796,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-frequency-map-mutmut-3-fi-356d52cef3db,mutmut-col-mutmut-collections-core-x-frequency-map-mutmut-3,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,4,0,0,0,1,0,,,,,test_verification_failed,,7,7,1,1,447.21125906700036,1,src/mutmut_collections/core.py,0,1,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-index-of-max-mutmut-1-fin-a452fe86d2cf,mutmut-col-mutmut-collections-core-x-index-of-max-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,307.45117864499844,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-interleave-mutmut-1-final-c97ee85524c2,mutmut-col-mutmut-collections-core-x-interleave-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_collection,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,380.0137055940031,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-merge-counts-mutmut-4-fin-eaf8b314e58f,mutmut-col-mutmut-collections-core-x-merge-counts-mutmut-4,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,5,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,4,4,0,0,345.6222068879979,0,,0,1,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: def merge_counts(left: dict, right: dict) -> dict:
+    merged = left.copy()
+    for key, value in right.items():
+        if key in merged:
+            merged[key] += value
+        else:
+            merged[key] = value
+    return merged First invalid response: ```python
+def merge_counts(left: dict, right: dict) -> dict:
+    merged = left.copy()
+    for key, value in right.items():
+        if key in merged:
+            merged[key] += value
+        else:
+            merged[key] = value
+    return merged
+``` Raw response: ```python
+def merge_counts(left: dict, right: dict) -> dict:
+    merged = left.copy()
+    for key, value in right.items():
+        if key in merged:
+            merged[key] += value
+        else:
+            merged[key] = value
+    return merged
+```"
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-mode-mutmut-12-final-rese-6f63e1587655,mutmut-col-mutmut-collections-core-x-mode-mutmut-12,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,6,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,8,8,1,1,341.4307401320002,0,,0,1,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from collections import Counter
+
+def mode(values: Sequence[int]) -> int:
+    """"""Return the most frequent value, breaking ties by first appearance.""""""
+    if not values:
+        raise ValueError(""mode requires at least one value"")
+    
+    counts = Counter(values)
+    max_count = max(counts Raw response: ```python
+from collections import Counter
+
+def mode(values: Sequence[int]) -> int:
+    """"""Return the most frequent value, breaking ties by first appearance.""""""
+    if not values:
+        raise ValueError(""mode requires at least one value"")
+    
+    counts = Counter(values)
+    max_count = max(counts.values())
+    candidates = [value for value, count in counts.items() if count == max_count]
+    
+    return min(candidates)  # Break ties by first appearance
+```"
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-pairwise-differences-mutm-d6a792075ff7,mutmut-col-mutmut-collections-core-x-pairwise-differences-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,5,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,4,4,0,0,272.28535899500275,0,,0,1,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: def pairwise_differences(numbers: list) -> list:
+    if not numbers or len(numbers) < 2:
+        raise ValueError(""Input list must contain at least two elements."")
+    return [numbers[i] - numbers[i-1] for i in range(1, len(numbers))] First invalid response: ```python
+def pairwise_differences(numbers: list) -> list:
+    return [numbers[i] - numbers[i-1] for i in range(1, len(numbers))]
+``` Raw response: ```python
+def pairwise_differences(numbers: list) -> list:
+    if not numbers or len(numbers) < 2:
+        raise ValueError(""Input list must contain at least two elements."")
+    return [numbers[i] - numbers[i-1] for i in range(1, len(numbers))]
+```"
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-partition-by-sign-mutmut-faf76e0bc72f,mutmut-col-mutmut-collections-core-x-partition-by-sign-mutmut-4,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_boundary,escalated,False,False,False,False,failed,True,False,9,False,False,True,4,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,3,3,0,0,160.51452036299452,0,,0,0,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: def partition_by_sign(values: Iterable[int]) -> tuple[list[int], list[int]]:
+    """"""Partition values into negative and non-negative groups.""""""
+    negative: list[int] = []
+    non_negative: list[int] = []
+    for value in values:
+        target = negative if value <= 0 else non_negative
+        target.append(value)
+    return negative, non_negative First invalid response: ```python
+def partition_by_sign(values: Iterable[int]) -> tuple[list[int], list[int]]:
+    """"""Partition values into negative and non-negative groups.""""""
+    negative: list[int] = []
+    non_negative: list[int] = []
+    for value in values:
+        target = negative if value <= 0 else non_negative Raw response: ```python
+def partition_by_sign(values: Iterable[int]) -> tuple[list[int], list[int]]:
+    """"""Partition values into negative and non-negative groups.""""""
+    negative: list[int] = []
+    non_negative: list[int] = []
+    for value in values:
+        target = negative if value <= 0 else non_negative
+        target.append(value)
+    return negative, non_negative
+```"
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-rotate-left-mutmut-3-fina-ef5b92476c27,mutmut-col-mutmut-collections-core-x-rotate-left-mutmut-3,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,268.1437652349996,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-take-until-mutmut-1-final-5cf78f5450c7,mutmut-col-mutmut-collections-core-x-take-until-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_collection,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,251.45464557500236,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-col-mutmut-collections-core-x-transpose-mutmut-1-final-9bb769825a59,mutmut-col-mutmut-collections-core-x-transpose-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,5,1,0,0,1,0,,,,,test_verification_failed,,7,7,1,1,471.96969118099514,1,src/mutmut_collections/core.py,0,1,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-camel-to-snake-mutmut-10-fin-1b5eb0a71581,mutmut-txt-mutmut-textdata-core-x-camel-to-snake-mutmut-10,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,6,3,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,6,6,1,1,505.657205866999,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+def camel_to_snake(name: str) -> str:
+    """"""Convert simple CamelCase identifiers to snake_case.""""""
+    first = re.sub(r""(.)([A-Z][A-Z]+)"", r""\1_\2"", name)
+    second = re.sub(r""([a-z0-9])([A-Z])"", r""\1_\2"", first)
+    normalized = second.replace(""-"", ""_"").lower()
+    return re.sub(r""_+"", Raw response: ```python
+def camel_to_snake(name: str) -> str:
+    """"""Convert simple CamelCase identifiers to snake_case.""""""
+    first = re.sub(r""(.)([A-Z][A-Z]+)"", r""\1_\2"", name)
+    second = re.sub(r""([a-z0-9])([A-Z])"", r""\1_\2"", first)
+    normalized = second.replace(""-"", ""_"").lower()
+    return re.sub(r""_+"", ""_"", normalized).replace("" "", ""_"")
+```"
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-count-substring-mutmut-1-fin-15c7bdb03d35,mutmut-txt-mutmut-textdata-core-x-count-substring-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,399.8149583850027,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-format-bytes-mutmut-31-final-f61cbd8f91eb,mutmut-txt-mutmut-textdata-core-x-format-bytes-mutmut-31,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,5,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,4,4,0,0,409.3204573949988,0,,0,1,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: def format_bytes(size: int) -> str:
+    if size == 0:
+        return ""0 B""
+    
+    units = [""B"", ""KiB"", ""MiB"", ""GiB"", ""TiB"", ""PiB"", ""EiB""]
+    unit_index = 0
+    
+    while size >= 1024 and unit_index < len(units) - 1:
+        size /= 1024
+        unit_index += 1
+    
+    return f""{size:.1f} {units[unit_index]}"" First invalid response: ```python
+def format_bytes(size: int) -> str:
+    if size == 0:
+        return ""0 B""
+    
+    units = [""B"", ""KiB"", ""MiB"", ""GiB"", ""TiB"", ""PiB"", ""EiB""]
+    unit_index = 0
+    
+    while size >= 1024 and unit_index < len(units) - 1:
+        size /= 1024
+        unit_index += 1
+    
+    return f""{size:. Raw response: ```python
+def format_bytes(size: int) -> str:
+    if size == 0:
+        return ""0 B""
+    
+    units = [""B"", ""KiB"", ""MiB"", ""GiB"", ""TiB"", ""PiB"", ""EiB""]
+    unit_index = 0
+    
+    while size >= 1024 and unit_index < len(units) - 1:
+        size /= 1024
+        unit_index += 1
+    
+    return f""{size:.1f} {units[unit_index]}""
+```"
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-format-initials-mutmut-2-fin-14b50c48e6c8,mutmut-txt-mutmut-textdata-core-x-format-initials-mutmut-2,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,366.6681013060006,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-longest-common-prefix-mutmut-930eb7bc379a,mutmut-txt-mutmut-textdata-core-x-longest-common-prefix-mutmut-11,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,5,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,4,4,0,0,414.6534543529997,0,,0,1,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: def longest_common_prefix(strs: list[str]) -> str:
+    if not strs:
+        return """"
+    
+    prefix = strs[0]
+    for s in strs[1:]:
+        while s.find(prefix) != 0:
+            prefix = prefix[:-1]
+            if not prefix:
+                return """"
+    return prefix First invalid response: ```python
+def longest_common_prefix(strs: list[str]) -> str:
+    if not strs:
+        return """"
+    
+    prefix = strs[0]
+    for s in strs[1:]:
+        while s.find(prefix) != 0:
+            prefix = prefix[:-1]
+            if not prefix:
+                return """"
+    return prefix
+``` Raw response: ```python
+def longest_common_prefix(strs: list[str]) -> str:
+    if not strs:
+        return """"
+    
+    prefix = strs[0]
+    for s in strs[1:]:
+        while s.find(prefix) != 0:
+            prefix = prefix[:-1]
+            if not prefix:
+                return """"
+    return prefix
+```"
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-mask-email-mutmut-17-final-r-e38f0bbe70fe,mutmut-txt-mutmut-textdata-core-x-mask-email-mutmut-17,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,414.73254659800295,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-normalize-newlines-mutmut-1-d66dfd751b85,mutmut-txt-mutmut-textdata-core-x-normalize-newlines-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,350.33979831000033,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-normalize-spaces-mutmut-1-fi-5cd432e97d82,mutmut-txt-mutmut-textdata-core-x-normalize-spaces-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,320.80976874199405,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-parse-csv-line-mutmut-1-fina-026031d932aa,mutmut-txt-mutmut-textdata-core-x-parse-csv-line-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,4,0,0,0,1,0,,,,,test_verification_failed,,7,7,1,1,429.89126331399893,1,src/mutmut_textdata/core.py,0,1,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-parse-key-values-mutmut-19-f-6a4f126772ab,mutmut-txt-mutmut-textdata-core-x-parse-key-values-mutmut-19,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,failed,True,False,9,False,True,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,291.8083680990021,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-redact-terms-mutmut-12-final-be4cd3d18a70,mutmut-txt-mutmut-textdata-core-x-redact-terms-mutmut-12,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,5,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,6,6,1,1,290.99050517299474,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+def redact_terms(text: str, terms: Iterable[str]) -> str:
+    """"""Replace case-insensitive literal terms with asterisks.""""""
+    result = text
+    for term in terms:
+        if not term:
+            continue
+        pattern = re.compile(re.escape(term), flags=re.IGNORECASE)
+        result = Raw response: ```python
+def redact_terms(text: str, terms: Iterable[str]) -> str:
+    """"""Replace case-insensitive literal terms with asterisks.""""""
+    result = text
+    for term in terms:
+        if not term:
+            continue
+        pattern = re.compile(re.escape(term), flags=re.IGNORECASE)
+        result = pattern.sub(""*"" * len(term), """")
+    return result
+```"
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-remove-duplicate-words-mutmu-e45907e81694,mutmut-txt-mutmut-textdata-core-x-remove-duplicate-words-mutmut-4,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,4,0,0,0,1,0,,,,,test_verification_failed,,7,7,1,1,450.60442684800364,1,src/mutmut_textdata/core.py,0,1,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-slugify-mutmut-10-final-rese-e990bcdf3c45,mutmut-txt-mutmut-textdata-core-x-slugify-mutmut-10,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,5,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,4,4,0,0,406.9374482850035,0,,0,1,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: import re
+
+def slugify(text: str) -> str:
+    """"""Create a lowercase ASCII-style hyphenated slug.""""""
+    lowered = text.strip().lower()
+    normalized = re.sub(r""XX[^a-z0-9]+XX"", ""-"", lowered)
+    return normalized.strip(""-"") First invalid response: ```python
+import re
+
+def slugify(text: str) -> str:
+    """"""Create a lowercase ASCII-style hyphenated slug.""""""
+    lowered = text.strip().lower()
+    normalized = re.sub(r""XX[^a-z0-9]+XX"", ""-"", lowered)
+    return normalized.strip(""-"")
+``` Raw response: ```python
+import re
+
+def slugify(text: str) -> str:
+    """"""Create a lowercase ASCII-style hyphenated slug.""""""
+    lowered = text.strip().lower()
+    normalized = re.sub(r""XX[^a-z0-9]+XX"", ""-"", lowered)
+    return normalized.strip(""-"")
+```"
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-split-sentences-mutmut-2-fin-795c5d9c068c,mutmut-txt-mutmut-textdata-core-x-split-sentences-mutmut-2,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,320.23205345199676,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.
+tool-agent-no-reflection-mutmut-txt-mutmut-textdata-core-x-strip-prefixes-mutmut-1-fina-b7f59962a594,mutmut-txt-mutmut-textdata-core-x-strip-prefixes-mutmut-1,tool-agent-no-reflection,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,passed,True,True,9,True,False,False,3,0,0,0,1,0,,,,,test_verification_failed,,5,5,1,1,278.634014301002,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,The current repository revision passed the full suite.

@@ -1,0 +1,32 @@
+{
+  "capture_note": "The experiment_config.json file is the exact configuration written during the final experiment. This environment snapshot was captured afterward from the submission machine.",
+  "capture_type": "post_hoc_submission_environment",
+  "captured_at_utc": "2026-07-16T08:13:29.917451+00:00",
+  "git": {
+    "evaluated_commit": "6524a37d802fc83faa9db0111facaf491da4e618",
+    "submission_commit": "386cbeb9de8cb5d51d7a88efb7574f37992f4d0f"
+  },
+  "model": {
+    "backend": "ollama",
+    "max_tokens": 512,
+    "name": "qwen2.5-coder:3b",
+    "seed": 42,
+    "temperature": 0.0,
+    "timeout_seconds": 300
+  },
+  "ollama": {
+    "installed_models": "NAME                       ID              SIZE      MODIFIED    \nqwen2.5-coder:3b           f72c60cabf62    1.9 GB    10 days ago    \nqwen2.5-coder:1.5b         d7372fd82851    986 MB    12 days ago    \nnomic-embed-text:latest    0a109f422b47    274 MB    2 weeks ago    \ntinyllama:latest           2644915ede35    637 MB    7 weeks ago",
+    "version": "ollama version is 0.24.0"
+  },
+  "platform": {
+    "machine": "x86_64",
+    "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "release": "6.18.33.2-microsoft-standard-WSL2",
+    "system": "Linux"
+  },
+  "python": {
+    "implementation": "CPython",
+    "version": "3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]"
+  },
+  "schema_version": "1.0"
+}

@@ -1,0 +1,404 @@
+run_id,task_id,condition,runtime_verification_mode,benchmark_suite,origin_type,difficulty,defect_category,status,succeeded,verified_success,unverified_success,full_suite_passed,hidden_suite_status,hidden_suite_configured,hidden_suite_passed,hidden_suite_test_count,hidden_verified_success,visible_hidden_disagreement,policy_failure,model_calls,decision_parse_failures,patch_rejection_count,patch_application_failure_count,verification_failure_count,failed_attempt_count,failed_attempt_ids,current_attempt_id,last_failed_attempt_id,last_rolled_back_attempt_id,last_failure_category,terminal_failure_category,steps,tool_calls,patch_attempts,successful_patch_count,elapsed_seconds,changed_file_count,changed_files,invalid_patch_count,rejected_tool_count,timeout_count,rollback_count,syntax_check_count,syntax_error_count,targeted_test_count,full_test_count,failed_test_count,finish_rejection_count,reflection_count,hypothesis_revision_count,no_progress_rejection_count,budget_exhausted,final_message
+fixed-workflow-challenge-csv-record-parser-final-research-evaluation-6524a37-20260714-090253,challenge-csv-record-parser,fixed-workflow,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,state_machine_parser,escalated,False,False,False,False,failed,True,False,3,False,False,True,3,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,7,7,1,1,152.86659988500014,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from typing import List
+
+def parse_record(record: str) -> List[str]:
+    """"""Parse one CSV record with commas and doubled-quote escapes.""""""
+    fields: List[str] = []
+    current_field = """"
+    quoted = False
+
+    for char in record:
+        if char == '""':
+            if quoted: Raw response: ```python
+from typing import List
+
+def parse_record(record: str) -> List[str]:
+    """"""Parse one CSV record with commas and doubled-quote escapes.""""""
+    fields: List[str] = []
+    current_field = """"
+    quoted = False
+
+    for char in record:
+        if char == '""':
+            if quoted:
+                # End of a quoted field
+                if current_field.strip():
+                    fields.append(current_field)
+                current_field = """"
+                quoted = False
+            e"
+fixed-workflow-challenge-cursor-pagination-final-research-evaluation-6524a37-20260714-090253,challenge-cursor-pagination,fixed-workflow,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,cursor_state_protocol,escalated,False,False,False,False,failed,True,False,3,False,False,True,0,0,0,0,1,0,,,,,decision_parse_error,decision_parse_error,2,2,0,0,0.8516050469997936,0,,0,0,0,0,0,0,0,1,1,0,0,0,0,False,The decision policy failed safely: PolicyResponseError: Could not locate a source file in search output.
+fixed-workflow-challenge-deep-config-merge-final-research-evaluation-6524a37-20260714-090253,challenge-deep-config-merge,fixed-workflow,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,recursive_data_merge,escalated,False,False,False,False,failed,True,False,3,False,False,True,3,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,7,7,1,1,162.82198073499967,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+def merge_config(
+    base: dict[str, Any],
+    override: dict[str, Any],
+) -> dict[str, Any]:
+    """"""Deep-merge dictionaries without mutating either input.""""""
+    result = base.copy()
+    for key, value in override.items():
+        current = result.get(key)
+        if isinstance(current, Raw response: ```python
+def merge_config(
+    base: dict[str, Any],
+    override: dict[str, Any],
+) -> dict[str, Any]:
+    """"""Deep-merge dictionaries without mutating either input.""""""
+    result = base.copy()
+    for key, value in override.items():
+        current = result.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            result[key] = merge_config(current, value)
+        elif isinstance(current, list) and isinstance(value, list):
+            result[key] = current + value
+"
+fixed-workflow-challenge-interval-merge-final-research-evaluation-6524a37-20260714-090253,challenge-interval-merge,fixed-workflow,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,multi_line_interval_logic,escalated,False,False,False,False,failed,True,False,3,False,False,True,3,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,7,7,1,1,229.31633197799965,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from typing import *
+from collections import *
+
+def merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """"""Merge overlapping or touching closed intervals.""""""
+    normalized = [(start, end) for start, end in intervals]
+    if not normalized:
+        return [] Raw response: ```python
+from typing import *
+from collections import *
+
+def merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """"""Merge overlapping or touching closed intervals.""""""
+    normalized = [(start, end) for start, end in intervals]
+    if not normalized:
+        return []
+
+    normalized.sort(key=lambda item: (item[1], item[0]))
+    merged: list[tuple[int, int]] = [normalized[0]]
+
+    for start, end in normalized[1:]:
+        previous_start, previous_end = merged[-1]
+    "
+fixed-workflow-challenge-inventory-reservation-final-research-evaluation-6524a37-20260714-090253,challenge-inventory-reservation,fixed-workflow,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,transactional_state_management,escalated,False,False,False,False,failed,True,False,3,False,False,True,3,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,7,7,1,1,167.02090944299925,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from typing import Dict, List, Tuple
+
+def reserve_inventory(
+    stock: Dict[str, int],
+    requests: List[Tuple[str, int]],
+) -> dict[str, int]:
+    """"""Return remaining stock after atomically applying reservations.""""""
+    remaining = stock.copy()  # Create a copy of the stock to avoid mut Raw response: ```python
+from typing import Dict, List, Tuple
+
+def reserve_inventory(
+    stock: Dict[str, int],
+    requests: List[Tuple[str, int]],
+) -> dict[str, int]:
+    """"""Return remaining stock after atomically applying reservations.""""""
+    remaining = stock.copy()  # Create a copy of the stock to avoid mutation
+    for sku, quantity in requests:
+        if quantity < 0:
+            raise ValueError(""requested quantities must be positive"")
+        if sku not in remaining:
+            raise KeyError(sku)"
+fixed-workflow-challenge-ledger-reconciliation-final-research-evaluation-6524a37-20260714-090253,challenge-ledger-reconciliation,fixed-workflow,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,idempotent_financial_state,escalated,False,False,False,False,failed,True,False,3,False,False,True,3,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,7,7,1,1,218.05059657600032,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from typing import Dict, Iterable
+
+class Transfer:
+    def __init__(self, transaction_id: str, source: str, destination: str, amount: int):
+        self.transaction_id = transaction_id
+        self.source = source
+        self.destination = destination
+        self.amount = amount
+
+def rec Raw response: ```python
+from typing import Dict, Iterable
+
+class Transfer:
+    def __init__(self, transaction_id: str, source: str, destination: str, amount: int):
+        self.transaction_id = transaction_id
+        self.source = source
+        self.destination = destination
+        self.amount = amount
+
+def reconcile(
+    balances: dict[str, int],
+    transfers: Iterable[Transfer],
+) -> dict[str, int]:
+    """"""Apply unique positive transfers without mutating input balances.""""""
+    result = balances.copy()
+  "
+fixed-workflow-challenge-rolling-rate-limit-final-research-evaluation-6524a37-20260714-090253,challenge-rolling-rate-limit,fixed-workflow,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,stateful_window_algorithm,escalated,False,False,False,False,failed,True,False,3,False,False,True,2,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,3,3,0,0,1.1042742429999635,0,,0,0,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: from collections import deque
+
+def admit_events(
+    timestamps: list[int],
+    *,
+    limit: int,
+    window: int,
+) -> list[bool]:
+    """"""Return admission decisions for monotonic integer timestamps.""""""
+    if limit < 0 or window < 0:
+        raise ValueError(""limit and window must be positive"")
+
+    accepted: deque[int] = deque()
+    decisions: list[bool] = []
+
+    for timestamp in timestamps:
+        while accepted and accepted[0] < timestamp - window:
+            accepted.popleft()
+
+         First invalid response: ```python
+from collections import deque
+
+def admit_events(
+    timestamps: list[int],
+    *,
+    limit: int,
+    window: int,
+) -> list[bool]:
+    """"""Return admission decisions for monotonic integer timestamps.""""""
+    if limit < 0 or window < 0:
+        raise ValueError(""limit and window must be pos Raw response: ```python
+from collections import deque
+
+def admit_events(
+    timestamps: list[int],
+    *,
+    limit: int,
+    window: int,
+) -> list[bool]:
+    """"""Return admission decisions for monotonic integer timestamps.""""""
+    if limit < 0 or window < 0:
+        raise ValueError(""limit and window must be positive"")
+
+    accepted: deque[int] = deque()
+    decisions: list[bool] = []
+
+    for timestamp in timestamps:
+        while accepted and accepted[0] < timestamp - window:
+            accepted.popleft()"
+fixed-workflow-challenge-topological-order-final-research-evaluation-6524a37-20260714-090253,challenge-topological-order,fixed-workflow,strict,patchpilot-primary-research-benchmark,manual_challenge,hard,graph_algorithm_invariant,escalated,False,False,False,False,failed,True,False,3,False,False,True,4,3,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,7,7,1,1,324.51167587099917,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+def dependency_order(graph: dict[str, set[str]]) -> list[str]:
+    """"""Return a deterministic topological order for node prerequisites.""""""
+    nodes = set(graph)
+    
+    dependents: dict[str, set[str]] = {node: set() for node in nodes}
+    indegree = {node: 0 for node in nodes}
+    for nod Raw response: ```python
+def dependency_order(graph: dict[str, set[str]]) -> list[str]:
+    """"""Return a deterministic topological order for node prerequisites.""""""
+    nodes = set(graph)
+    
+    dependents: dict[str, set[str]] = {node: set() for node in nodes}
+    indegree = {node: 0 for node in nodes}
+    for node, prerequisites in graph.items():
+        for prerequisite in prerequisites:
+            dependents.setdefault(node, set()).add(prerequisite)
+            indegree[prerequisite] += 1
+ 
+    ready = [no"
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-add-mutmut-1-final-research-evaluati-a5e051214227,mutmut-alg-mutmut-algorithms-core-x-add-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,53.16997413399986,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10-final-research-evalu-3ba5b6b86b98,mutmut-alg-mutmut-algorithms-core-x-clamp-mutmut-10,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,failed,True,False,8,False,True,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,74.80325598499985,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1-final-research-a67548fea430,mutmut-alg-mutmut-algorithms-core-x-count-vowels-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,59.3649738919994,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-factorial-mutmut-10-final-research-e-73023c33535f,mutmut-alg-mutmut-algorithms-core-x-factorial-mutmut-10,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,60.6048971600012,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-flatten-once-mutmut-1-final-research-fb36fa8b298b,mutmut-alg-mutmut-algorithms-core-x-flatten-once-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_collection,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,83.52188697800011,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-gcd-mutmut-6-final-research-evaluati-701b6a467cc3,mutmut-alg-mutmut-algorithms-core-x-gcd-mutmut-6,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,55.37083990099927,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-has-balanced-parentheses-mutmut-11-f-9ab43f47ba87,mutmut-alg-mutmut-algorithms-core-x-has-balanced-parentheses-mutmut-11,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,82.40658796699972,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-is-even-mutmut-1-final-research-eval-047cef2070b3,mutmut-alg-mutmut-algorithms-core-x-is-even-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_comparison,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,52.34553961200072,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-is-palindrome-mutmut-5-final-researc-0d32a2638945,mutmut-alg-mutmut-algorithms-core-x-is-palindrome-mutmut-5,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_comparison,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,59.48290714200084,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-lcm-mutmut-10-final-research-evaluat-cfbf121a57cc,mutmut-alg-mutmut-algorithms-core-x-lcm-mutmut-10,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,89.6038310699987,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-median-mutmut-15-final-research-eval-cccc62221e1b,mutmut-alg-mutmut-algorithms-core-x-median-mutmut-15,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,84.32898592700076,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-merge-sorted-mutmut-12-final-researc-9ddd6beb986b,mutmut-alg-mutmut-algorithms-core-x-merge-sorted-mutmut-12,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,122.74206221599889,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-multiply-mutmut-1-final-research-eva-78e86d84b267,mutmut-alg-mutmut-algorithms-core-x-multiply-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,55.967678513001374,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-normalize-whitespace-mutmut-1-final-b4f014423814,mutmut-alg-mutmut-algorithms-core-x-normalize-whitespace-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,63.33108058200014,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-alg-mutmut-algorithms-core-x-safe-divide-mutmut-6-final-research-1b4f3246d6a7,mutmut-alg-mutmut-algorithms-core-x-safe-divide-mutmut-6,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,8,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,63.19546610600082,1,src/mutmut_algorithms/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-bounded-slice-mutmut-20-final-resea-868de301adf6,mutmut-col-mutmut-collections-core-x-bounded-slice-mutmut-20,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_collection,escalated,False,False,False,False,failed,True,False,9,False,False,True,2,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,3,3,0,0,0.6641999969997414,0,,0,0,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: def bounded_slice(
+    values: Sequence[int],
+    start: int,
+    stop: int,
+) -> list[int]:
+    """"""Return a slice after clamping bounds into the sequence range.""""""
+    lower = max(0, min(start, len(values)))
+    upper = max(lower, min(stop, len(values)))
+    return list(range(lower, upper + 1)) First invalid response: ```python
+def bounded_slice(
+    values: Sequence[int],
+    start: int,
+    stop: int,
+) -> list[int]:
+    """"""Return a slice after clamping bounds into the sequence range.""""""
+    lower = max(0, min(start, len(values)))
+    upper = max(lower, min(stop, len(values)))
+    return list(range(lower, upper Raw response: ```python
+def bounded_slice(
+    values: Sequence[int],
+    start: int,
+    stop: int,
+) -> list[int]:
+    """"""Return a slice after clamping bounds into the sequence range.""""""
+    lower = max(0, min(start, len(values)))
+    upper = max(lower, min(stop, len(values)))
+    return list(range(lower, upper + 1))
+```"
+fixed-workflow-mutmut-col-mutmut-collections-core-x-chunked-mutmut-10-final-research-ev-8ea30e1d386e,mutmut-col-mutmut-collections-core-x-chunked-mutmut-10,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,103.25192171399976,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-cumulative-sum-mutmut-5-final-resea-4d14bbca6834,mutmut-col-mutmut-collections-core-x-cumulative-sum-mutmut-5,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,63.76734392099934,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-first-non-none-mutmut-1-final-resea-13a5e3e397df,mutmut-col-mutmut-collections-core-x-first-non-none-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,59.947649791,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-flatten-once-mutmut-1-final-researc-625e8652a14f,mutmut-col-mutmut-collections-core-x-flatten-once-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_collection,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,78.84597685799963,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-frequency-map-mutmut-3-final-resear-cad290924745,mutmut-col-mutmut-collections-core-x-frequency-map-mutmut-3,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,78.44530891700015,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-index-of-max-mutmut-1-final-researc-c0175e42f793,mutmut-col-mutmut-collections-core-x-index-of-max-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,71.7588485719989,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-interleave-mutmut-1-final-research-aae69d4b2a7f,mutmut-col-mutmut-collections-core-x-interleave-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_collection,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,158.61737636100042,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-merge-counts-mutmut-4-final-researc-2854e50116a0,mutmut-col-mutmut-collections-core-x-merge-counts-mutmut-4,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,115.68766675999905,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-mode-mutmut-12-final-research-evalu-e204a8a1193c,mutmut-col-mutmut-collections-core-x-mode-mutmut-12,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,3,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,7,7,1,1,91.34985351100113,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+from collections import Counter
+
+def mode(values: Sequence[int]) -> int:
+    """"""Return the most frequent value, breaking ties by first appearance.""""""
+    if not values:
+        raise ValueError(""mode requires at least one value"")
+    
+    counts = Counter(values)
+    max_count = max(counts Raw response: ```python
+from collections import Counter
+
+def mode(values: Sequence[int]) -> int:
+    """"""Return the most frequent value, breaking ties by first appearance.""""""
+    if not values:
+        raise ValueError(""mode requires at least one value"")
+    
+    counts = Counter(values)
+    max_count = max(counts.values())
+    candidates = [value for value, count in counts.items() if count == max_count]
+    
+    return min(candidates)  # Break ties by first appearance
+```"
+fixed-workflow-mutmut-col-mutmut-collections-core-x-pairwise-differences-mutmut-1-final-3ea91eb543c5,mutmut-col-mutmut-collections-core-x-pairwise-differences-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,114.64517807299853,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-partition-by-sign-mutmut-4-final-re-01c4f11602c5,mutmut-col-mutmut-collections-core-x-partition-by-sign-mutmut-4,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_boundary,escalated,False,False,False,False,failed,True,False,9,False,False,True,2,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,3,3,0,0,1.066243201999896,0,,0,0,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: def partition_by_sign(values: Iterable[int]) -> tuple[list[int], list[int]]:
+    """"""Partition values into negative and non-negative groups.""""""
+    negative: list[int] = []
+    non_negative: list[int] = []
+    for value in values:
+        target = negative if value <= 0 else non_negative
+        target.append(value)
+    return negative, non_negative First invalid response: ```python
+def partition_by_sign(values: Iterable[int]) -> tuple[list[int], list[int]]:
+    """"""Partition values into negative and non-negative groups.""""""
+    negative: list[int] = []
+    non_negative: list[int] = []
+    for value in values:
+        target = negative if value <= 0 else non_negative Raw response: ```python
+def partition_by_sign(values: Iterable[int]) -> tuple[list[int], list[int]]:
+    """"""Partition values into negative and non-negative groups.""""""
+    negative: list[int] = []
+    non_negative: list[int] = []
+    for value in values:
+        target = negative if value <= 0 else non_negative
+        target.append(value)
+    return negative, non_negative
+```"
+fixed-workflow-mutmut-col-mutmut-collections-core-x-rotate-left-mutmut-3-final-research-39abb7aaebff,mutmut-col-mutmut-collections-core-x-rotate-left-mutmut-3,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,147.65651972500018,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-take-until-mutmut-1-final-research-98d5982bd919,mutmut-col-mutmut-collections-core-x-take-until-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_collection,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,126.16755690299942,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-col-mutmut-collections-core-x-transpose-mutmut-1-final-research-e-c9a9cfc92676,mutmut-col-mutmut-collections-core-x-transpose-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,2,1,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,218.98422777499945,1,src/mutmut_collections/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-camel-to-snake-mutmut-10-final-researc-ec67ba4428df,mutmut-txt-mutmut-textdata-core-x-camel-to-snake-mutmut-10,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,4,3,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,7,7,1,1,280.71179121599926,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+def camel_to_snake(name: str) -> str:
+    """"""Convert simple CamelCase identifiers to snake_case.""""""
+    first = re.sub(r""(.)([A-Z][A-Z]+)"", r""\1_\2"", name)
+    second = re.sub(r""([a-z0-9])([A-Z])"", r""\1_\2"", first)
+    normalized = second.replace(""-"", ""_"").lower()
+    return re.sub(r""_+"", Raw response: ```python
+def camel_to_snake(name: str) -> str:
+    """"""Convert simple CamelCase identifiers to snake_case.""""""
+    first = re.sub(r""(.)([A-Z][A-Z]+)"", r""\1_\2"", name)
+    second = re.sub(r""([a-z0-9])([A-Z])"", r""\1_\2"", first)
+    normalized = second.replace(""-"", ""_"").lower()
+    return re.sub(r""_+"", ""_"", normalized).replace(""http_"", ""HTTP_"")
+```"
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-count-substring-mutmut-1-final-researc-2caeef767f49,mutmut-txt-mutmut-textdata-core-x-count-substring-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,118.82486086899917,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-format-bytes-mutmut-31-final-research-1142f6df36f9,mutmut-txt-mutmut-textdata-core-x-format-bytes-mutmut-31,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,2,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,3,3,0,0,0.8546450180001557,0,,0,0,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: def format_bytes(size: int) -> str:
+    """"""Format a non-negative byte count using binary units.""""""
+    if size < 0:
+        raise ValueError(""size cannot be negative"")
+    units = (""B"", ""KiB"", ""MiB"", ""GiB"")
+    value = float(size)
+    unit = units[0]
+    for candidate in units:
+        unit = candidate
+        if value < 1024 or candidate == units[-1]:
+            break
+        value *= 1024
+    if unit == ""B"":
+        return f""{int(value)} {unit}""
+    return f""{value:.1f} {unit}"" First invalid response: ```python
+def format_bytes(size: int) -> str:
+    """"""Format a non-negative byte count using binary units.""""""
+    if size < 0:
+        raise ValueError(""size cannot be negative"")
+    units = (""B"", ""KiB"", ""MiB"", ""GiB"")
+    value = float(size)
+    unit = units[0]
+    for candidate in units:
+        uni Raw response: ```python
+def format_bytes(size: int) -> str:
+    """"""Format a non-negative byte count using binary units.""""""
+    if size < 0:
+        raise ValueError(""size cannot be negative"")
+    units = (""B"", ""KiB"", ""MiB"", ""GiB"")
+    value = float(size)
+    unit = units[0]
+    for candidate in units:
+        unit = candidate
+        if value < 1024 or candidate == units[-1]:
+            break
+        value *= 1024
+    if unit == ""B"":
+        return f""{int(value)} {unit}""
+    return f""{value:.1f} {unit}""
+```"
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-format-initials-mutmut-2-final-researc-1dc429b1879e,mutmut-txt-mutmut-textdata-core-x-format-initials-mutmut-2,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,133.2757939610001,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-longest-common-prefix-mutmut-11-final-c0632ca0d615,mutmut-txt-mutmut-textdata-core-x-longest-common-prefix-mutmut-11,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,124.33554040299896,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-mask-email-mutmut-17-final-research-ev-7e45e807e995,mutmut-txt-mutmut-textdata-core-x-mask-email-mutmut-17,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,154.7104746240002,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-normalize-newlines-mutmut-1-final-rese-d2c7e8ce9cd0,mutmut-txt-mutmut-textdata-core-x-normalize-newlines-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,108.94923958799882,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-normalize-spaces-mutmut-1-final-resear-cc41886774e5,mutmut-txt-mutmut-textdata-core-x-normalize-spaces-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,82.27864114599834,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-parse-csv-line-mutmut-1-final-research-ae4fa429449e,mutmut-txt-mutmut-textdata-core-x-parse-csv-line-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,97.11098133299674,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-parse-key-values-mutmut-19-final-resea-a9613a6d2b6d,mutmut-txt-mutmut-textdata-core-x-parse-key-values-mutmut-19,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,196.71488427800068,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-redact-terms-mutmut-12-final-research-103ccbc56573,mutmut-txt-mutmut-textdata-core-x-redact-terms-mutmut-12,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,3,2,0,0,2,1,1,,1,1,decision_parse_error,decision_parse_error,7,7,1,1,150.90692336199936,0,,0,0,0,1,1,0,0,2,2,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: The generated patch exactly repeats a previous failed patch. Revise the repair using the latest failing-test evidence. First invalid response: ```python
+def redact_terms(text: str, terms: Iterable[str]) -> str:
+    """"""Replace case-insensitive literal terms with asterisks.""""""
+    result = text
+    for term in terms:
+        if not term:
+            continue
+        pattern = re.compile(re.escape(term), flags=re.IGNORECASE)
+        result = Raw response: ```python
+def redact_terms(text: str, terms: Iterable[str]) -> str:
+    """"""Replace case-insensitive literal terms with asterisks.""""""
+    result = text
+    for term in terms:
+        if not term:
+            continue
+        pattern = re.compile(re.escape(term), flags=re.IGNORECASE)
+        result = pattern.sub(""*"" * len(term), """")
+    return result
+```"
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-remove-duplicate-words-mutmut-4-final-a339d863f87e,mutmut-txt-mutmut-textdata-core-x-remove-duplicate-words-mutmut-4,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,medium,mutmut_boolean,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,128.34367344099883,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-slugify-mutmut-10-final-research-evalu-d3fe903ed90c,mutmut-txt-mutmut-textdata-core-x-slugify-mutmut-10,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,escalated,False,False,False,False,failed,True,False,9,False,False,True,2,2,0,0,1,0,,,,,decision_parse_error,decision_parse_error,3,3,0,0,0.8368151589966146,0,,0,0,0,0,0,0,0,1,1,0,0,0,0,False,"The decision policy failed safely: PolicyResponseError: Model response contained neither a usable corrected function nor a replacement line: No valid changed lines in model diff: import re
+
+def slugify(text: str) -> str:
+    """"""Create a lowercase ASCII-style hyphenated slug.""""""
+    lowered = text.strip().lower()
+    normalized = re.sub(r""XX[^a-z0-9]+XX"", ""-"", lowered)
+    return normalized.strip(""-"") First invalid response: ```python
+import re
+
+def slugify(text: str) -> str:
+    """"""Create a lowercase ASCII-style hyphenated slug.""""""
+    lowered = text.strip().lower()
+    normalized = re.sub(r""XX[^a-z0-9]+XX"", ""-"", lowered)
+    return normalized.strip(""-"")
+``` Raw response: ```python
+import re
+
+def slugify(text: str) -> str:
+    """"""Create a lowercase ASCII-style hyphenated slug.""""""
+    lowered = text.strip().lower()
+    normalized = re.sub(r""XX[^a-z0-9]+XX"", ""-"", lowered)
+    return normalized.strip(""-"")
+```"
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-split-sentences-mutmut-2-final-researc-b96fc244ed22,mutmut-txt-mutmut-textdata-core-x-split-sentences-mutmut-2,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_arithmetic,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,155.91182092000236,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
+fixed-workflow-mutmut-txt-mutmut-textdata-core-x-strip-prefixes-mutmut-1-final-research-a4eb7de4b198,mutmut-txt-mutmut-textdata-core-x-strip-prefixes-mutmut-1,fixed-workflow,strict,patchpilot-primary-research-benchmark,mutmut,easy,mutmut_constant,succeeded,True,True,False,True,passed,True,True,9,True,False,False,1,0,0,0,1,0,,,,,test_verification_failed,,6,6,1,1,122.96229707999737,1,src/mutmut_textdata/core.py,0,0,0,0,1,0,0,2,1,0,0,0,0,False,Full test suite passed after repair.
