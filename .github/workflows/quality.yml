@@ -39,6 +39,11 @@ jobs:
       - name: Validate Mutmut research suite
         run: python scripts/validate_mutmut_research_suite.py
 
+      - name: Reproduce final statistical analysis
+        env:
+          MPLBACKEND: Agg
+        run: ./scripts/reproduce_final_analysis.sh
+
       - name: Run Ruff
         run: python -m ruff check .
 

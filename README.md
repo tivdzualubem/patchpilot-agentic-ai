@@ -229,17 +229,28 @@ evaluated commit: 6524a37d802fc83faa9db0111facaf491da4e618
 
 ## Reproducing the statistical analysis
 
-After an evaluation has produced a combined `runs.csv`:
+The exact 212-run matrix and experiment configuration are committed under:
 
-```bash
-python scripts/analyze_final_evaluation.py \
-  artifacts/evaluation/<EXPERIMENT_ID>/runs.csv \
-  --output-dir results/reproduced-analysis
+```text
+results/final-research-evaluation-6524a37/raw/
 ```
 
-The analysis produces condition summaries, task-level outcomes, failure taxonomy, exact paired McNemar tests with Holm correction, latency comparisons, and a machine-readable JSON summary.
+Reproduce and verify every published final statistical table and regenerate
+the report-relevant evaluation figures with one command:
 
-The committed final analysis is under:
+```bash
+./scripts/reproduce_final_analysis.sh
+```
+
+To retain the regenerated files for inspection:
+
+```bash
+./scripts/reproduce_final_analysis.sh artifacts/reproduced-final-analysis
+```
+
+The command derives all outputs from the committed raw `runs.csv`, compares
+the regenerated tables against the published tables, and fails on any
+difference. The committed final analysis is under:
 
 ```text
 results/final-research-evaluation-6524a37/
@@ -253,6 +264,10 @@ The final results support several bounded observations:
 - The reflective configuration outperformed the no-reflection tool agent descriptively, but the trace data recorded no completed reflection events.
 - Agentic conditions required substantially more runtime than the baselines.
 - Hidden verification exposed a small number of visible/hidden disagreements.
+- The final 212-run matrix did not execute the separately proposed
+  targeted-only versus full-suite runtime-verification ablation. The
+  visible-versus-hidden comparison is descriptive and must not be interpreted
+  as a causal verification ablation.
 - The manually authored hard subset remained unsolved by every condition.
 
 These findings do not establish general superiority of one architecture, reflection as a causal mechanism, or production-level repair performance.
