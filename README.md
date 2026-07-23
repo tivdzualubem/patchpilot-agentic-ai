@@ -325,7 +325,7 @@ cd docs/final_report
 For academic discussion, cite the repository and final report:
 
 ```text
-Tivdzua Lubem Noah and Gisele Wiykiynyuy.
+Tivdzua Lubem Noah, Gisele Wiykiynyuy and Ayomide Isreal Ajibade.
 PatchPilot: A Safety-Constrained Tool-Using Agent for Python Debugging and Repair.
 Master's Agentic AI Project Report, 2026.
 ```
